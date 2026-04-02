@@ -35,3 +35,11 @@ class TestScanRecord:
         scans = await get_recent_scans(session, limit=10)
         assert scans[0].narrative == "Second"  # most recent first
         assert scans[1].narrative == "First"
+
+    async def test_limit_works(self, session):
+        from src.db import save_scan, get_recent_scans
+
+        for i in range(5):
+            await save_scan(session, tickers=[f"T{i}"], var_pct=-float(i), narrative=f"Scan {i}")
+        scans = await get_recent_scans(session, limit=3)
+        assert len(scans) == 3
