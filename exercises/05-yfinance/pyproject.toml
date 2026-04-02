@@ -1,0 +1,15 @@
+[project]
+name = "yfinance-exercise"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["yfinance>=0.2.40", "numpy>=1.26.0", "pandas>=2.2.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["market_data"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
