@@ -21,6 +21,6 @@ async def save_scan(
 
 
 async def get_recent_scans(session: AsyncSession, limit: int = 10) -> list[ScanRecord]:
-    stmt = select(ScanRecord).order_by(ScanRecord.created_at.desc()).limit(limit)
+    stmt = select(ScanRecord).order_by(ScanRecord.created_at.desc(), ScanRecord.id.desc()).limit(limit)
     result = await session.execute(stmt)
     return list(result.scalars().all())
