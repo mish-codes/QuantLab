@@ -95,6 +95,12 @@ if len(raw_tickers) > 5:
 # Weight sliders
 st.markdown("#### Portfolio Weights")
 
+# Detect if tickers changed — auto equal-weight on change
+current_ticker_key = ",".join(tickers)
+if current_ticker_key != st.session_state.get("_prev_tickers", ""):
+    st.session_state._prev_tickers = current_ticker_key
+    st.session_state.use_equal_weights = True
+
 equal_weight = st.button("Equal Weight")
 if equal_weight or st.session_state.get("use_equal_weights"):
     st.session_state.use_equal_weights = False
