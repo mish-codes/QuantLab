@@ -170,6 +170,43 @@ The existing `projects/stock-risk-scanner/` Docker setup deploys directly to Ren
 
 ---
 
+## UX Polish
+
+### Rate Limiting
+Max 10 scans per hour per session. Tracked via `st.session_state` counter with timestamp. Show "Rate limit reached — try again in X minutes" when exceeded.
+
+### Caching
+Cache scan results for 24 hours using `st.cache_data`. Key on (tickers, weights, period). Avoids redundant API calls and yfinance fetches for the same portfolio.
+
+### Error UX
+Friendly messages for all failure modes:
+- Invalid ticker: "Ticker XYZ not found — check the symbol and try again"
+- API timeout: "The scan is taking longer than expected — the backend may be waking up"
+- yfinance down: "Unable to fetch market data — please try again in a few minutes"
+- API unreachable: "Backend is offline — please try again later"
+
+No raw Python tracebacks shown to the user.
+
+### Mobile Responsive
+Use `st.set_page_config(layout="wide")`. Metrics cards and charts stack vertically on small screens (Streamlit handles this by default). Test that the layout is usable on phone-sized viewports.
+
+### Sample Output on Load
+Pre-load the "Tech Giants" (AAPL, MSFT, GOOG) scan result on first visit so the page isn't empty. Show results immediately with a "Try your own portfolio" prompt above the input section. Use cached/precomputed data for instant load.
+
+### Backend Status Indicator
+Green/red dot in sidebar showing API health status. On page load, call `GET /health`. If it fails, show "Backend warming up..." with a spinner. Retry every 5 seconds until healthy.
+
+### Page Config
+```python
+st.set_page_config(
+    page_title="Stock Risk Scanner",
+    page_icon="📊",
+    layout="wide",
+)
+```
+
+---
+
 ## Out of Scope
 
 - User authentication
