@@ -9,7 +9,7 @@ from lib.api_client import check_health, submit_scan, poll_scan, get_recent_scan
 from lib.charts import price_history_chart, cumulative_return_chart, drawdown_chart, weight_pie_chart
 from lib.risk_colors import var_color, cvar_color, drawdown_color, volatility_color, sharpe_color
 
-st.set_page_config(page_title="Stock Risk Scanner", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Stock Risk Scanner | FinBytes QuantLabs", page_icon="📊", layout="wide")
 
 # --- Backend status in sidebar ---
 if check_health():

@@ -1,12 +1,14 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="FinBytes Labs",
+    page_title="FinBytes QuantLabs",
     page_icon="📊",
     layout="wide",
 )
 
-st.sidebar.title("FinBytes Labs")
+# Sidebar with logo
+st.sidebar.image("assets/logo.png", width=180)
+st.sidebar.title("FinBytes QuantLabs")
 st.sidebar.markdown("**Built by** [Manisha](https://mishcodesfinbytes.github.io/FinBytes/)")
 st.sidebar.markdown("---")
 st.sidebar.markdown(
@@ -18,7 +20,8 @@ st.sidebar.markdown(
     "[Blog Post](https://mishcodesfinbytes.github.io/FinBytes/quant-lab/stock-risk-scanner/)"
 )
 
-st.title("Welcome to FinBytes Labs")
+# Main landing page
+st.title("Welcome to FinBytes QuantLabs")
 st.markdown(
     "Interactive demos of quantitative finance projects. "
     "Select a project from the sidebar to get started."
