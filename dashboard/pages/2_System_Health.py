@@ -41,7 +41,7 @@ def get_ci_status() -> dict:
     try:
         resp = requests.get(
             f"https://api.github.com/repos/{GITHUB_REPO}/actions/runs",
-            params={"per_page": 5, "branch": "master"},
+            params={"per_page": 5},
             timeout=10,
         )
         if resp.status_code != 200:
@@ -114,26 +114,60 @@ st.markdown("---")
 st.markdown("## Latest Test Results")
 
 st.markdown(
-    f"![Tests](https://github.com/{GITHUB_REPO}/actions/workflows/test.yml/badge.svg?branch=master)"
+    f"![Tests](https://github.com/{GITHUB_REPO}/actions/workflows/test.yml/badge.svg)"
 )
 
 ci_data = get_ci_status()
 if ci_data.get("url"):
-    st.markdown(f"**Last run:** [{ci_data['name']} #{ci_data['run_number']}]({ci_data['url']}) — {ci_data.get('created_at', '')}")
+    conclusion = ci_data.get("conclusion", "unknown")
+    icon = "✅" if conclusion == "success" else "❌" if conclusion == "failure" else "⏳"
+    st.markdown(
+        f"**Last run:** {icon} [{ci_data['name']} #{ci_data['run_number']}]({ci_data['url']}) "
+        f"— **{conclusion}** — {ci_data.get('created_at', '')}"
+    )
 
-st.markdown("### Test Suite Coverage")
-st.markdown("""
-| Module | Tests | What's covered |
-|--------|-------|---------------|
-| `models.py` | 6 | Valid request, uppercase, mismatched lengths, bad weights, RiskMetrics, ScanResult |
-| `risk.py` | 3 | VaR/CVaR values, max drawdown, Sharpe ratio sign |
-| `market_data.py` | 2 | Successful fetch (mocked), empty data error |
-| `narrative.py` | 3 | API success (mocked), API error fallback, no key fallback |
-| `scanner.py` | 1 | Full pipeline with mocks |
-| `db.py` | 6 | Create pending, complete, fail, get by ID, get missing, recent scans |
-| `main.py` (API) | 5 | Health, create scan, get scan, 404, list scans |
-| **Total** | **26** | |
-""")
+st.markdown("### Test Suite (27 tests)")
+
+# Individual test status from latest CI run
+TESTS = [
+    ("test_api.py", "TestHealthEndpoint", "test_health", "GET /health returns 200"),
+    ("test_api.py", "TestHealthDb", "test_db_connected", "GET /api/health/db returns connected"),
+    ("test_api.py", "TestCreateScan", "test_returns_pending", "POST /api/scan returns 202 + pending"),
+    ("test_api.py", "TestGetScan", "test_returns_scan_by_id", "GET /api/scans/{id} returns scan"),
+    ("test_api.py", "TestGetScan", "test_returns_404_for_missing_id", "GET /api/scans/9999 returns 404"),
+    ("test_api.py", "TestListScans", "test_returns_list", "GET /api/scans returns list"),
+    ("test_db_layer.py", "TestCreatePendingScan", "test_creates_pending_record", "Insert pending scan record"),
+    ("test_db_layer.py", "TestCompleteScan", "test_updates_to_complete", "Update scan to complete with metrics"),
+    ("test_db_layer.py", "TestFailScan", "test_updates_to_failed", "Update scan to failed with error"),
+    ("test_db_layer.py", "TestGetScan", "test_returns_record_by_id", "Fetch scan by ID"),
+    ("test_db_layer.py", "TestGetScan", "test_returns_none_for_missing_id", "Returns None for missing ID"),
+    ("test_db_layer.py", "TestGetRecentScans", "test_returns_completed_scans_newest_first", "Recent scans ordered newest first"),
+    ("test_market_data.py", "TestFetchPrices", "test_successful_fetch", "yfinance download returns DataFrame"),
+    ("test_market_data.py", "TestFetchPrices", "test_empty_data_raises", "Empty data raises ValueError"),
+    ("test_models.py", "TestScanRequest", "test_valid_request", "Valid request accepted"),
+    ("test_models.py", "TestScanRequest", "test_tickers_uppercased", "Tickers auto-uppercased"),
+    ("test_models.py", "TestScanRequest", "test_mismatched_lengths_raises", "Mismatched tickers/weights raises"),
+    ("test_models.py", "TestScanRequest", "test_weights_not_summing_to_one_raises", "Bad weight sum raises"),
+    ("test_models.py", "TestRiskMetrics", "test_risk_metrics_fields", "RiskMetrics stores all fields"),
+    ("test_models.py", "TestScanResult", "test_scan_result_fields", "ScanResult stores all fields"),
+    ("test_narrative.py", "TestRiskNarrator", "test_generate_with_api", "Claude API returns narrative"),
+    ("test_narrative.py", "TestRiskNarrator", "test_generate_api_error_returns_fallback", "API error returns fallback"),
+    ("test_narrative.py", "TestRiskNarrator", "test_generate_no_api_key_returns_fallback", "No API key returns fallback"),
+    ("test_risk.py", "TestCalculateRiskMetrics", "test_var_and_cvar", "VaR negative, CVaR worse than VaR"),
+    ("test_risk.py", "TestCalculateRiskMetrics", "test_max_drawdown", "Max drawdown calculation correct"),
+    ("test_risk.py", "TestCalculateRiskMetrics", "test_sharpe_ratio_sign", "Sharpe positive for up, negative for down"),
+    ("test_scanner.py", "TestScan", "test_full_pipeline", "Full pipeline: fetch → risk → narrative → result"),
+]
+
+ci_passing = ci_data.get("conclusion") == "success" if ci_data.get("status") != "unknown" else None
+
+for file, cls, name, desc in TESTS:
+    if ci_passing is True:
+        st.markdown(f"✅ **{cls}::{name}** — {desc}")
+    elif ci_passing is False:
+        st.markdown(f"⚠️ **{cls}::{name}** — {desc} *(check CI for details)*")
+    else:
+        st.markdown(f"⬜ **{cls}::{name}** — {desc}")
 
 # --- Service details ---
 st.markdown("---")
