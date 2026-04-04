@@ -11,7 +11,27 @@ from lib.api_client import check_health, submit_scan, poll_scan, get_recent_scan
 from lib.charts import price_history_chart, cumulative_return_chart, drawdown_chart, weight_pie_chart
 from lib.risk_colors import var_color, cvar_color, drawdown_color, volatility_color, sharpe_color
 
+from pathlib import Path
+
 st.set_page_config(page_title="Stock Risk Scanner | FinBytes QuantLabs", page_icon="📊", layout="wide")
+
+HERE = Path(__file__).parent.parent
+
+# Custom sidebar (auto-nav is hidden)
+st.sidebar.image(str(HERE / "assets" / "logo.png"), width=180)
+st.sidebar.title("FinBytes QuantLabs")
+st.sidebar.markdown("**Built by** [Manisha](https://mishcodesfinbytes.github.io/FinBytes/)")
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Projects")
+st.sidebar.page_link("pages/1_Stock_Risk_Scanner.py", label="Stock Risk Scanner", icon="📊")
+st.sidebar.markdown("*More coming soon...*")
+st.sidebar.markdown("---")
+st.sidebar.page_link("app.py", label="System Health", icon="🩺")
+st.sidebar.markdown("---")
+st.sidebar.markdown(
+    "[GitHub](https://github.com/MishCodesFinBytes/QuantLab) · "
+    "[Blog](https://mishcodesfinbytes.github.io/FinBytes/quant-lab/stock-risk-scanner/)"
+)
 
 API_URL = st.secrets.get("API_URL", "http://localhost:8000")
 GITHUB_REPO = "MishCodesFinBytes/QuantLab"
