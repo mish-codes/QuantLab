@@ -104,8 +104,10 @@ if current_ticker_key != st.session_state.get("_prev_tickers", ""):
 equal_weight = st.button("Equal Weight")
 if equal_weight or st.session_state.get("use_equal_weights"):
     st.session_state.use_equal_weights = False
+    eq = 100.0 / max(len(tickers), 1)
     for i, t in enumerate(tickers):
-        st.session_state[f"weight_{i}"] = 100.0 / len(tickers)
+        st.session_state[f"weight_slider_{i}"] = eq
+    st.rerun()
 
 weights = []
 weight_cols = st.columns(len(tickers)) if tickers else []
@@ -115,7 +117,7 @@ for i, t in enumerate(tickers):
             f"{t}",
             min_value=0.0,
             max_value=100.0,
-            value=st.session_state.get(f"weight_{i}", 100.0 / max(len(tickers), 1)),
+            value=100.0 / max(len(tickers), 1),
             step=1.0,
             key=f"weight_slider_{i}",
         )
