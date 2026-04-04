@@ -1,0 +1,21 @@
+[project]
+name = "rds-postgresql-exercise"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    "pydantic>=2.7.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.24.0", "aiosqlite>=0.20.0"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["yield_store"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

@@ -32,6 +32,7 @@ One-time setup steps for the AWS exercises (09-20) and capstones (Bond Pricing E
 - Attach these policies directly:
   - `AmazonS3FullAccess`
   - `AmazonRDSFullAccess`
+  - `AmazonEC2FullAccess` (needed for security groups + VPC — `ec2:*` covers both)
   - `AWSLambda_FullAccess`
   - `AmazonAPIGatewayAdministrator`
   - `AmazonSQSFullAccess`
