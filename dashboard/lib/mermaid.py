@@ -1,4 +1,5 @@
 """Render Mermaid diagrams in Streamlit via components.html."""
+import base64
 import hashlib
 import streamlit.components.v1 as components
 
@@ -6,11 +7,11 @@ import streamlit.components.v1 as components
 def render_mermaid(diagram: str, height: int = 400) -> None:
     """Render a Mermaid diagram inside an HTML component.
 
-    Uses a unique ID per diagram and a template script tag to avoid
-    HTML entity issues with special characters in diagram syntax.
+    Base64-encodes the diagram to avoid escaping issues with
+    special characters in Mermaid syntax (arrows, braces, etc).
     """
-    # Unique ID to avoid conflicts when multiple diagrams on same page
     uid = "m" + hashlib.md5(diagram.encode()).hexdigest()[:8]
+    b64 = base64.b64encode(diagram.strip().encode()).decode()
 
     html = f"""
     <!DOCTYPE html>
@@ -27,12 +28,12 @@ def render_mermaid(diagram: str, height: int = 400) -> None:
         <script type="module">
             import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
             mermaid.initialize({{ startOnLoad: false, theme: 'default', securityLevel: 'loose' }});
-            const diagram = `{diagram}`;
+            const diagram = atob('{b64}');
             try {{
                 const {{ svg }} = await mermaid.render('{uid}', diagram);
                 document.getElementById('output-{uid}').innerHTML = svg;
             }} catch(e) {{
-                document.getElementById('output-{uid}').innerHTML = '<p class="error">Diagram error: ' + e.message + '</p>';
+                document.getElementById('output-{uid}').innerHTML = '<p class="error">' + e.message + '</p>';
             }}
         </script>
     </body>
