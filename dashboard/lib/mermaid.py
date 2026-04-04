@@ -5,35 +5,28 @@ import streamlit.components.v1 as components
 def render_mermaid(diagram: str, height: int = 400) -> None:
     """Render a Mermaid diagram inside an HTML component.
 
-    The .mermaid div is hidden until Mermaid JS processes it,
-    preventing raw code from flashing on screen.
+    The raw diagram text is hidden. Only the rendered SVG is shown.
     """
     html = f"""
     <!DOCTYPE html>
     <html>
     <head>
-        <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
         <style>
-            body {{ margin: 0; padding: 0; background: white; }}
-            .mermaid {{ visibility: hidden; }}
-            .mermaid[data-processed="true"] {{ visibility: visible; }}
+            body {{ margin: 0; padding: 8px; background: white; font-family: sans-serif; }}
+            #raw {{ display: none; }}
+            #output {{ min-height: 50px; }}
         </style>
     </head>
     <body>
-        <div class="mermaid">
-{diagram}
-        </div>
+        <div id="raw">{diagram}</div>
+        <div id="output"></div>
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
         <script>
-            mermaid.initialize({{
-                startOnLoad: true,
-                theme: 'default',
-                securityLevel: 'loose',
-            }});
-            // Ensure visibility after render
-            mermaid.run().then(function() {{
-                document.querySelectorAll('.mermaid').forEach(function(el) {{
-                    el.setAttribute('data-processed', 'true');
-                }});
+            mermaid.initialize({{ startOnLoad: false, theme: 'default', securityLevel: 'loose' }});
+            mermaid.render('mermaid-svg', document.getElementById('raw').textContent).then(function(result) {{
+                document.getElementById('output').innerHTML = result.svg;
+            }}).catch(function(err) {{
+                document.getElementById('output').innerHTML = '<p style="color:red;">Diagram render error: ' + err + '</p>';
             }});
         </script>
     </body>
