@@ -19,3 +19,10 @@ secrets.toml
 # Personal docs
 docs/Manisha_*.docx
 docs/Manisha_*.xlsx
+
+# Office temp files
+~$*.xlsx
+~$*.docx
+
+# Scratch / manual test scripts
+try_it.py
