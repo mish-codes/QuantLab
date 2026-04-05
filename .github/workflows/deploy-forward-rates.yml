@@ -1,0 +1,57 @@
+name: Deploy forward-rates Lambda
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'exercises/13-cicd-github-actions/src/**'
+      - '.github/workflows/deploy-forward-rates.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'exercises/13-cicd-github-actions/**'
+
+# OIDC — no long-lived AWS keys stored in GitHub.
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+        working-directory: exercises/13-cicd-github-actions
+      - run: pytest -v --tb=short
+        working-directory: exercises/13-cicd-github-actions
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Package Lambda
+        working-directory: exercises/13-cicd-github-actions/src
+        run: |
+          zip -j deployment.zip forward_rates.py handler.py
+          ls -la deployment.zip
+
+      - name: Update Lambda function code
+        working-directory: exercises/13-cicd-github-actions/src
+        run: |
+          aws lambda update-function-code \
+            --function-name quant-lab-forward-rates \
+            --zip-file fileb://deployment.zip \
+            --publish
