@@ -1,0 +1,12 @@
+src/deployment.zip
+src/package/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfvars
