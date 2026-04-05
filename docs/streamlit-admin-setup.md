@@ -65,7 +65,19 @@ Save — Streamlit restarts the app.
 Visit https://finbytes.streamlit.app/Admin — enter the admin password, then
 status / stop / start.
 
-## 4. Rotate if leaked
+## 4. Expand policy for AWS status panel (optional)
+
+The admin page also shows a read-only status of Lambda, API Gateway and
+S3 resources. If the panel shows "read failed" warnings, the
+`QuantLabRDSLifecycle` policy needs the additional statements in
+`docs/rds-admin-policy.json` (scoped to the Lambda ARN, the REST API ID,
+and the S3 bucket ARN).
+
+Sign in as root → IAM → Users → `quant-lab-streamlit` → the inline
+policy `QuantLabRDSLifecycle` → **Edit** → replace JSON with the current
+content of `docs/rds-admin-policy.json` → Review → Save.
+
+## 5. Rotate if leaked
 
 Delete the access key in IAM → User → Security credentials, create a new
 one, update the Streamlit secret.

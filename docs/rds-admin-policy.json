@@ -6,16 +6,39 @@
             "Effect": "Allow",
             "Action": [
                 "rds:StartDBInstance",
-                "rds:StopDBInstance",
-                "rds:DescribeDBInstances"
+                "rds:StopDBInstance"
             ],
             "Resource": "arn:aws:rds:us-east-1:349348221529:db:quant-lab-db"
         },
         {
-            "Sid": "DescribeAllRequiredByAPI",
+            "Sid": "DescribeAllRDS",
             "Effect": "Allow",
             "Action": "rds:DescribeDBInstances",
             "Resource": "*"
+        },
+        {
+            "Sid": "ReadLambdaFunction",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:GetFunction",
+                "lambda:GetFunctionConfiguration"
+            ],
+            "Resource": "arn:aws:lambda:us-east-1:349348221529:function:quant-lab-bootstrap"
+        },
+        {
+            "Sid": "ReadAPIGateway",
+            "Effect": "Allow",
+            "Action": "apigateway:GET",
+            "Resource": "arn:aws:apigateway:us-east-1::/restapis/5wsgaoptef*"
+        },
+        {
+            "Sid": "ReadS3Bucket",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::finbytes-quant-lab-data"
         }
     ]
 }

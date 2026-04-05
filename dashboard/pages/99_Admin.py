@@ -123,6 +123,84 @@ with col3:
             st.error(f"Start failed: {exc.response['Error']['Message']}")
 
 st.markdown("---")
+
+# --- AWS resource status -------------------------------------------------
+#
+# Read-only view of the other QuantLab AWS resources. IAM permissions
+# are scoped to specific ARNs in QuantLabRDSLifecycle; see
+# docs/rds-admin-policy.json.
+
+st.subheader("AWS Resources")
+
+
+def _lambda_status() -> None:
+    lam = boto3.client(
+        "lambda",
+        aws_access_key_id=aws_cfg["access_key_id"],
+        aws_secret_access_key=aws_cfg["secret_access_key"],
+        region_name=aws_cfg.get("region", "us-east-1"),
+    )
+    try:
+        fn = lam.get_function(FunctionName="quant-lab-bootstrap")["Configuration"]
+        state = fn.get("State", "?")
+        badge = {"Active": "green", "Inactive": "orange", "Failed": "red"}.get(state, "gray")
+        st.markdown(f"**Lambda** `quant-lab-bootstrap` — :{badge}[{state}]")
+        st.caption(
+            f"Runtime: {fn.get('Runtime', '?')} · "
+            f"{fn.get('MemorySize', '?')}MB · "
+            f"timeout {fn.get('Timeout', '?')}s · "
+            f"last modified {fn.get('LastModified', '?')[:10]}"
+        )
+    except ClientError as exc:
+        st.warning(f"Lambda read failed: {exc.response['Error']['Code']}")
+
+
+def _apigw_status() -> None:
+    gw = boto3.client(
+        "apigateway",
+        aws_access_key_id=aws_cfg["access_key_id"],
+        aws_secret_access_key=aws_cfg["secret_access_key"],
+        region_name=aws_cfg.get("region", "us-east-1"),
+    )
+    api_id = "5wsgaoptef"
+    try:
+        api = gw.get_rest_api(restApiId=api_id)
+        stages = gw.get_stages(restApiId=api_id).get("item", [])
+        st.markdown(f"**API Gateway** `{api['name']}` — :green[deployed]")
+        for stage in stages:
+            name = stage["stageName"]
+            url = f"https://{api_id}.execute-api.{aws_cfg.get('region', 'us-east-1')}.amazonaws.com/{name}/curves/bootstrap"
+            st.caption(f"stage `{name}` → {url}")
+    except ClientError as exc:
+        st.warning(f"API Gateway read failed: {exc.response['Error']['Code']}")
+
+
+def _s3_status() -> None:
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=aws_cfg["access_key_id"],
+        aws_secret_access_key=aws_cfg["secret_access_key"],
+        region_name=aws_cfg.get("region", "us-east-1"),
+    )
+    bucket = "finbytes-quant-lab-data"
+    try:
+        prefixes = ["par-yields/", "spot-curves/"]
+        counts: dict[str, int] = {}
+        for prefix in prefixes:
+            resp = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
+            counts[prefix] = resp.get("KeyCount", 0)
+        st.markdown(f"**S3** `{bucket}` — :green[accessible]")
+        parts = [f"`{p}` {n}" for p, n in counts.items()]
+        st.caption("objects: " + " · ".join(parts))
+    except ClientError as exc:
+        st.warning(f"S3 read failed: {exc.response['Error']['Code']}")
+
+
+_lambda_status()
+_apigw_status()
+_s3_status()
+
+st.markdown("---")
 if st.button("Log out"):
     st.session_state.admin_authed = False
     st.rerun()
