@@ -19,6 +19,24 @@ render_sidebar()
 st.set_page_config(page_title="Stock Prediction", layout="wide")
 st.title("Stock Return Prediction (ML)")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Feature engineering:** creates lagged returns, SMA ratio, 20-day volatility, RSI, and volume change from historical data
+    - **Chronological split:** trains on older data, tests on recent data (no random shuffle -- avoids data leakage)
+    - **Linear Regression:** fits a linear relationship between features and next-day return
+    - **Random Forest:** ensemble of decision trees that captures non-linear patterns
+    - **Target:** next-day return (`close_tomorrow / close_today - 1`)
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **MAE (Mean Absolute Error):** average size of prediction errors -- lower is better
+    - **RMSE (Root Mean Squared Error):** like MAE but penalizes large errors more heavily
+    - **R-squared:** fraction of variance explained by the model; 0 = no skill, 1 = perfect (values near 0 are expected here)
+    - **Actual vs Predicted chart:** overlay of real and predicted returns over time
+    - **Note:** this is educational -- simple ML models cannot reliably predict stock returns
+    """)
+
 st.warning(
     "This tool is for **educational purposes only**. Predicting stock prices with simple "
     "ML models is not reliable for real trading. Past patterns do not guarantee future results."

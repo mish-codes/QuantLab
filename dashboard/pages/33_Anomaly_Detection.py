@@ -16,6 +16,23 @@ render_sidebar()
 st.set_page_config(page_title="Anomaly Detection", layout="wide")
 st.title("Return Anomaly Detection")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Z-Score method:** flags returns more than N standard deviations from the mean (`|z| > threshold`)
+    - **Isolation Forest:** ML algorithm that isolates outliers by randomly partitioning data; points that are easy to isolate are anomalies
+    - **Contamination (IF):** set to 5% -- expects roughly 5% of observations to be anomalies
+    - **Threshold slider:** controls Z-Score sensitivity; lower = more anomalies detected
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Total Observations:** number of trading days analyzed
+    - **Anomalies Detected:** count of days flagged as unusual
+    - **Anomaly Rate:** percentage of days that are anomalies
+    - **Returns chart:** blue line shows normal daily returns; red dots highlight anomalous days
+    - **Anomaly Dates table:** lists the flagged dates with closing price and return magnitude
+    """)
+
 # -- Inputs -------------------------------------------------------------------
 col1, col2, col3, col4 = st.columns(4)
 

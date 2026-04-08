@@ -16,6 +16,24 @@ render_sidebar()
 st.set_page_config(page_title="Portfolio Optimization", layout="wide")
 st.title("Portfolio Optimization -- Efficient Frontier")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Monte Carlo simulation:** generates thousands of random portfolio weight combinations
+    - **For each portfolio:** computes annualized return and volatility from historical data
+    - **Sharpe Ratio:** `(portfolio_return - risk_free_rate) / portfolio_volatility` -- higher is better
+    - **Efficient frontier:** the upper-left boundary of the scatter -- best return per unit of risk
+    - **Two optimal points:** Max Sharpe (best risk-adjusted return) and Min Volatility (lowest risk)
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Max Sharpe portfolio:** the weight allocation that maximizes risk-adjusted return
+    - **Min Volatility portfolio:** the weight allocation that minimizes overall portfolio risk
+    - **Scatter plot:** each dot is a random portfolio; color = Sharpe ratio (yellow = high, purple = low)
+    - **Red/blue stars:** mark the Max Sharpe and Min Volatility portfolios on the frontier
+    - **Weights expander:** shows the exact percentage allocation to each ticker for each optimal portfolio
+    """)
+
 # -- Inputs -------------------------------------------------------------------
 col1, col2 = st.columns(2)
 

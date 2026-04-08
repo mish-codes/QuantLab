@@ -15,6 +15,22 @@ render_sidebar()
 st.set_page_config(page_title="Currency Dashboard", layout="wide")
 st.title("Currency Dashboard")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Live rates:** fetches current exchange rates from the exchangerate API
+    - **Conversion:** `converted_amount = amount * exchange_rate`
+    - **Base currency:** all rates are quoted relative to your chosen base (e.g., 1 USD = X EUR)
+    - **Multi-target:** convert to several currencies at once
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Converted amounts:** your input amount expressed in each target currency
+    - **Rate value:** how many units of the target currency equal one unit of the base
+    - **Rate comparison chart:** bar chart comparing exchange rates across selected targets
+    - **Full rate table:** all available currency rates with converted amounts
+    """)
+
 # -- Inputs (main area) ------------------------------------------------------
 ALL_CURRENCIES = [
     "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "CNY", "INR", "BRL",

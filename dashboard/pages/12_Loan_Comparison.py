@@ -14,6 +14,23 @@ render_sidebar()
 st.set_page_config(page_title="Loan Comparison", layout="wide")
 st.title("Loan Comparison")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Runs full amortization** for two loans independently using the same principal
+    - **Compares totals:** monthly payment, total interest, and total cost side by side
+    - **Two modes:** compare two completely different loans, or the same loan at different interest rates
+    - **Savings callout:** highlights which loan costs less overall and by how much
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Monthly Payment:** fixed payment for each loan option
+    - **Total Interest:** cumulative interest over the life of each loan
+    - **Total Cost:** principal + interest for each loan
+    - **Summary chart:** grouped bars comparing the two loans on each metric
+    - **Balance Over Time chart:** shows how quickly each loan's balance declines
+    """)
+
 # -- Mode selection ------------------------------------------------------------
 mode = st.radio(
     "What do you want to compare?",

@@ -18,6 +18,25 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, confu
 st.set_page_config(page_title="Loan Default", layout="wide")
 st.title("Loan Default Prediction")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Training data:** 1,000 synthetic loan applications with features like income, credit score, debt ratio
+    - **Logistic Regression:** linear model that estimates default probability from a weighted sum of features
+    - **Random Forest:** ensemble of decision trees that captures non-linear relationships between features
+    - **Feature importance:** shows which input variables have the most influence on the prediction
+    - **Train/test split:** model is trained on one portion and evaluated on a held-out test set
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Accuracy:** percentage of correct predictions overall (default + no-default)
+    - **Precision:** of those predicted as default, how many actually defaulted
+    - **Recall:** of actual defaults, how many the model correctly caught
+    - **Feature Importance chart:** taller bars = stronger predictors of default
+    - **Confusion Matrix:** 2x2 grid showing true positives, false positives, true negatives, false negatives
+    - **Prediction panel:** enter your own applicant details and get a real-time default probability
+    """)
+
 # -- Model parameters ---------------------------------------------------------
 col1, col2 = st.columns(2)
 

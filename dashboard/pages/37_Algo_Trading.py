@@ -16,6 +16,24 @@ render_sidebar()
 st.set_page_config(page_title="Algo Trading", layout="wide")
 st.title("Algorithmic Trading Backtest")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **SMA Crossover:** buys when the fast moving average crosses above the slow MA; sells on the cross below
+    - **Momentum:** buys when the N-day return is positive; sells when it turns negative
+    - **Signal shift:** signals are shifted by one day to avoid look-ahead bias (trade on next day's open)
+    - **Backtest:** simulates historical execution, tracks cumulative strategy return vs buy-and-hold
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Strategy Return:** cumulative return from following the trading signals
+    - **Buy & Hold Return:** what you would have earned simply holding the stock
+    - **Sharpe Ratio:** annualized risk-adjusted return of the strategy
+    - **Max Drawdown:** the largest peak-to-trough decline during the backtest
+    - **Price chart:** shows buy (green triangle) and sell (red triangle) signal markers on the price line
+    - **Equity Curve:** strategy cumulative return vs buy-and-hold over time
+    """)
+
 # -- Inputs -------------------------------------------------------------------
 col1, col2, col3 = st.columns(3)
 

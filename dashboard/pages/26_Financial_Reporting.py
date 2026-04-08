@@ -17,6 +17,23 @@ render_sidebar()
 st.set_page_config(page_title="Financial Reporting", layout="wide")
 st.title("Financial Reporting")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Data source:** fetches historical stock data from yfinance
+    - **Daily returns:** `(close_today - close_yesterday) / close_yesterday`
+    - **Cumulative return:** the compounded total return over the period
+    - **Sharpe ratio:** annualized `mean(daily_return) / std(daily_return) * sqrt(252)`
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Total Return:** cumulative percentage gain or loss over the period
+    - **Avg Daily Return / Volatility:** the mean and standard deviation of daily returns
+    - **Sharpe Ratio:** risk-adjusted return -- higher is better; above 1.0 is generally good
+    - **Returns Histogram:** distribution of daily returns; wider spread = higher volatility
+    - **CSV Export:** download raw price data or summary statistics for further analysis
+    """)
+
 # -- Inputs (main area) ------------------------------------------------------
 col_in1, col_in2 = st.columns(2)
 
