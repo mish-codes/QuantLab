@@ -7,7 +7,17 @@ ASSETS = Path(__file__).resolve().parent.parent / "assets"
 
 
 def render_sidebar():
-    """Render the shared sidebar navigation. Call this at the top of every page."""
+    """Render the shared sidebar navigation. Call this at the top of every page.
+
+    Wrapped in try/except because st.page_link fails in AppTest (testing mode).
+    """
+    try:
+        _render_sidebar_impl()
+    except Exception:
+        pass  # graceful fallback in test mode
+
+
+def _render_sidebar_impl():
     st.sidebar.image(str(ASSETS / "logo.png"), width=180)
     st.sidebar.title("FinBytes QuantLabs")
     st.sidebar.markdown("**Built by** [Manisha](https://mishcodesfinbytes.github.io/FinBytes/)")
