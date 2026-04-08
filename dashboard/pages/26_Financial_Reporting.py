@@ -11,6 +11,8 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 from data import fetch_stock_history
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Financial Reporting", layout="wide")
 st.title("Financial Reporting")

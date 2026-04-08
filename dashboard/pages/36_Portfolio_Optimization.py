@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from data import fetch_multiple_stocks
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Portfolio Optimization", layout="wide")
 st.title("Portfolio Optimization -- Efficient Frontier")

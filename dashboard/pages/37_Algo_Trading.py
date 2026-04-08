@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from data import fetch_stock_history
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Algo Trading", layout="wide")
 st.title("Algorithmic Trading Backtest")

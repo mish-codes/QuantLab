@@ -1,4 +1,9 @@
 """Sentiment Analysis -- analyze finance headlines with TextBlob or VADER."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
+from nav import render_sidebar
+render_sidebar()
 
 import streamlit as st
 import pandas as pd

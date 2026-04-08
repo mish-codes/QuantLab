@@ -8,6 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 from finance import credit_card_payoff, credit_card_payment_for_months
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Credit Card Calculator", layout="wide")
 st.title("Credit Card Payoff Calculator")

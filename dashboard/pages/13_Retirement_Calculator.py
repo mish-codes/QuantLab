@@ -8,6 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 from finance import retirement_projection
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Retirement Calculator", layout="wide")
 st.title("Retirement Calculator")

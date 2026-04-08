@@ -8,6 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 from finance import compound_growth
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Investment Planner", layout="wide")
 st.title("Investment Growth Planner")
