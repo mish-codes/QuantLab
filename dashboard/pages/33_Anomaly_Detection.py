@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from data import fetch_stock_history
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Anomaly Detection", layout="wide")
 st.title("Return Anomaly Detection")

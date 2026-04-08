@@ -10,6 +10,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from data import SAMPLE_ESG_DATA
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="ESG Tracker", layout="wide")
 st.title("ESG Score Tracker")

@@ -9,6 +9,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from data import fetch_crypto_prices
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Crypto Portfolio", layout="wide")
 st.title("Crypto Portfolio Tracker")

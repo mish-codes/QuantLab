@@ -13,6 +13,8 @@ from plotly.subplots import make_subplots
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import acf
 from data import fetch_stock_history
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Time Series", layout="wide")
 st.title("Time Series Decomposition")

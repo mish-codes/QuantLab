@@ -8,6 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 from finance import loan_amortization
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Loan Comparison", layout="wide")
 st.title("Loan Comparison")

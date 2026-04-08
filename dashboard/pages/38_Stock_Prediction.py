@@ -13,6 +13,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from data import fetch_stock_history
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Stock Prediction", layout="wide")
 st.title("Stock Return Prediction (ML)")

@@ -9,6 +9,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 from finance import budget_summary
+from nav import render_sidebar
+render_sidebar()
 
 st.set_page_config(page_title="Budget Tracker", layout="wide")
 st.title("Budget Tracker")
