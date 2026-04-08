@@ -15,6 +15,23 @@ render_sidebar()
 st.set_page_config(page_title="Stock Analysis", layout="wide")
 st.title("Technical Analysis")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **SMA (Simple Moving Average):** average closing price over N days -- smooths out noise to show trend
+    - **EMA (Exponential Moving Average):** like SMA but gives more weight to recent prices
+    - **RSI (Relative Strength Index):** measures momentum on a 0-100 scale; >70 = overbought, <30 = oversold
+    - **MACD:** difference between fast and slow EMA -- signal line crossovers indicate trend changes
+    - **Bollinger Bands:** price channel based on 2 standard deviations around the 20-day SMA
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Price + SMA overlay:** when price is above the SMA, the trend is generally up
+    - **RSI panel:** readings above 70 suggest the stock may be overbought; below 30, oversold
+    - **MACD panel:** when MACD crosses above the signal line, it is a bullish signal (and vice versa)
+    - **Bollinger Bands:** price touching the upper band suggests high volatility; touching the lower band may signal a bounce
+    """)
+
 # -- Inputs (main area) ------------------------------------------------------
 col_in1, col_in2 = st.columns(2)
 

@@ -14,6 +14,23 @@ render_sidebar()
 st.set_page_config(page_title="Loan Amortization", layout="wide")
 st.title("Loan Amortization Calculator")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Fixed payment formula:** `PMT = P * r(1+r)^n / ((1+r)^n - 1)` where P = principal, r = monthly rate, n = total payments
+    - **Each month:** interest is calculated on the remaining balance, the rest of the payment goes to principal
+    - **Interest portion shrinks** over time as the balance decreases, while principal portion grows
+    - **Reverse mode:** finds the shortest loan term that fits within your monthly budget
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Monthly Payment:** the fixed amount due each period
+    - **Total Interest:** cumulative interest paid over the full loan term
+    - **Total Cost:** principal + total interest
+    - **Cumulative chart:** shows how principal and interest payments accumulate over time
+    - **Monthly Breakdown chart:** visualizes the shifting split between principal and interest each month
+    """)
+
 # -- Mode selection ------------------------------------------------------------
 mode = st.radio(
     "What do you want to calculate?",

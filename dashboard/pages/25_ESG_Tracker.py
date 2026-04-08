@@ -17,6 +17,22 @@ render_sidebar()
 st.set_page_config(page_title="ESG Tracker", layout="wide")
 st.title("ESG Score Tracker")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Data source:** attempts to fetch ESG scores from yfinance sustainability data
+    - **Fallback:** if real ESG data is unavailable, generates deterministic sample scores for illustration
+    - **Three pillars:** Environmental (E), Social (S), and Governance (G), each scored 0-100
+    - **ESG Total:** simple average of the three pillar scores
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Radar chart:** overlays each company's E, S, and G scores for easy visual comparison
+    - **Sector Averages chart:** grouped bars showing the average E/S/G scores per sector
+    - **Score Comparison table:** raw scores for each company with ESG total
+    - **Sample data warning:** if shown, scores are illustrative and not from a real ESG provider
+    """)
+
 DEFAULT_TICKERS = "AAPL,MSFT,GOOG,AMZN,TSLA"
 
 SECTOR_MAP = {

@@ -19,6 +19,23 @@ render_sidebar()
 st.set_page_config(page_title="Time Series", layout="wide")
 st.title("Time Series Decomposition")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Multiplicative decomposition:** splits price into `Trend * Seasonal * Residual` using statsmodels
+    - **Trend:** the long-term direction of the price, smoothed over a 252-day (1-year) window
+    - **Seasonal:** repeating patterns at a fixed period (e.g., intra-year cycles)
+    - **ACF (Autocorrelation Function):** measures how today's return correlates with returns N days ago
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Observed panel:** the raw closing price series
+    - **Trend panel:** the smoothed long-term trajectory -- rising trend = sustained growth
+    - **Seasonal panel:** repeating cyclical patterns; values near 1.0 mean no seasonal effect
+    - **Residual panel:** leftover noise after removing trend and seasonality -- large residuals indicate unusual moves
+    - **ACF bar chart:** bars outside the gray confidence bands indicate statistically significant autocorrelation at that lag
+    """)
+
 # -- Inputs -------------------------------------------------------------------
 col1, col2 = st.columns(2)
 

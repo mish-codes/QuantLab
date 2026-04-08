@@ -16,6 +16,22 @@ from sklearn.cluster import KMeans, DBSCAN
 st.set_page_config(page_title="Clustering", layout="wide")
 st.title("Customer Segmentation via Clustering")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **K-Means:** groups data points by minimizing distance to the nearest cluster center; you choose K (number of clusters)
+    - **DBSCAN:** density-based clustering that finds arbitrarily shaped clusters and marks sparse points as noise (-1)
+    - **Feature scaling:** all features are standardized (zero mean, unit variance) before clustering
+    - **Elbow method:** plots inertia vs K to help pick the optimal number of clusters (look for the "bend")
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Clusters Found:** number of distinct groups identified (DBSCAN may find fewer than expected)
+    - **Scatter Plot:** data points colored by cluster assignment on the first two features
+    - **Elbow Chart:** inertia drops sharply then flattens -- the bend suggests the best K
+    - **Cluster Profiles table:** average feature values per cluster, showing what makes each segment distinct
+    """)
+
 # -- Data source --------------------------------------------------------------
 data_source = st.radio(
     "Data source",

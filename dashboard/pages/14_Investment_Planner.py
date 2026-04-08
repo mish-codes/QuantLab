@@ -14,6 +14,22 @@ render_sidebar()
 st.set_page_config(page_title="Investment Planner", layout="wide")
 st.title("Investment Growth Planner")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Compound growth formula:** `FV = initial * (1+r)^n + monthly * ((1+r)^n - 1) / r`
+    - **Each month:** your balance earns interest, then your monthly addition is deposited
+    - **Reverse mode:** solves for the monthly investment needed to reach a target balance
+    - **Rate comparison tab:** lets you see how a different return rate changes the outcome
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Final Balance:** projected total value at the end of the investment horizon
+    - **Total Contributions:** your initial deposit plus all monthly additions
+    - **Total Growth:** the compound interest earned (final balance minus contributions)
+    - **Growth chart:** shaded area between contributions and total balance shows compound growth
+    """)
+
 # -- Mode selection ------------------------------------------------------------
 mode = st.radio(
     "What do you want to calculate?",

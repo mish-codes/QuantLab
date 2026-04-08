@@ -15,6 +15,22 @@ render_sidebar()
 st.set_page_config(page_title="Stock Tracker", layout="wide")
 st.title("Stock Tracker")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Data source:** fetches OHLCV (Open, High, Low, Close, Volume) data from yfinance
+    - **Candlestick chart:** each candle shows the open, high, low, and close for one trading day
+    - **Green candle:** close > open (price went up); **Red candle:** close < open (price went down)
+    - **Volume bars:** show how many shares traded each day, colored by price direction
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Current Price:** the most recent closing price and daily change
+    - **52-Week High / Low:** the highest and lowest prices in the selected period
+    - **Volume:** number of shares traded on the most recent day
+    - **Candlestick chart:** visual price action -- long candles mean large price moves, wicks show intraday range
+    """)
+
 # -- Inputs (main area) ------------------------------------------------------
 col_in1, col_in2 = st.columns(2)
 

@@ -12,6 +12,22 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Sentiment Analysis", layout="wide")
 st.title("Headline Sentiment Analysis")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **VADER:** rule-based sentiment scorer tuned for social media and news; outputs a compound score from -1 (most negative) to +1 (most positive)
+    - **TextBlob:** simpler polarity model based on word-level sentiment lookups
+    - **Thresholds:** score > 0.05 = Positive, < -0.05 = Negative, otherwise Neutral
+    - **Input:** paste your own headlines or use the provided financial news samples
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Average Sentiment:** the mean score across all headlines -- positive means overall optimistic tone
+    - **% Positive / % Negative:** proportion of headlines classified as positive or negative
+    - **Bar chart:** each headline's score sorted from most negative to most positive, color-coded
+    - **Scores table:** full list with per-headline score and label (Positive / Negative / Neutral)
+    """)
+
 # -- Sample headlines ----------------------------------------------------------
 DEFAULT_HEADLINES = [
     "Apple reports record quarterly revenue beating analyst expectations",

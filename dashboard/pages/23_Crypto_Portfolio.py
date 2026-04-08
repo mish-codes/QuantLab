@@ -15,6 +15,22 @@ render_sidebar()
 st.set_page_config(page_title="Crypto Portfolio", layout="wide")
 st.title("Crypto Portfolio Tracker")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Price source:** fetches live prices from the CoinGecko free API
+    - **Valuation:** `value = quantity * current_price` for each holding
+    - **24h change:** weighted average of each coin's 24-hour percentage change, weighted by portfolio value
+    - **Coin IDs:** use CoinGecko IDs (e.g., "bitcoin", "ethereum", "solana")
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Total Portfolio Value:** sum of all holdings in USD
+    - **24h Weighted Change:** overall portfolio movement in the last 24 hours
+    - **Allocation donut:** shows what percentage of your portfolio each coin represents
+    - **Holdings Detail table:** per-coin price, value, 24h change, and market cap
+    """)
+
 # -- Holdings Editor (main area) ----------------------------------------------
 st.subheader("Your Holdings")
 default_holdings = pd.DataFrame({

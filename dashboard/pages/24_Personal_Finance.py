@@ -15,6 +15,22 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Personal Finance", layout="wide")
 st.title("Personal Finance Dashboard")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Net worth:** `total assets - total liabilities`
+    - **Savings rate (est.):** `(income - estimated expenses) / income * 100`
+    - **Debt-to-income ratio:** estimated minimum payments as a percentage of monthly income
+    - **Editable tables:** add, remove, or adjust your assets and liabilities
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Net Worth:** your overall financial position -- positive is good, negative means liabilities exceed assets
+    - **Savings Rate:** the estimated percentage of income you are saving each month
+    - **Debt-to-Income Ratio:** lower is better; above 36% is generally considered high
+    - **Assets vs Liabilities chart:** horizontal bars showing the size of each item
+    """)
+
 # -- Inputs (main area) ------------------------------------------------------
 monthly_income = st.number_input(
     "Monthly Income ($)", min_value=0.0, value=6000.0, step=500.0

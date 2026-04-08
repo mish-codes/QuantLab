@@ -14,6 +14,24 @@ render_sidebar()
 st.set_page_config(page_title="Credit Card Calculator", layout="wide")
 st.title("Credit Card Payoff Calculator")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Monthly cycle:** interest = remaining balance x monthly rate (APR / 12)
+    - **Principal portion:** payment minus that month's interest goes toward the balance
+    - **Balance decreases** each month as principal chips away at the debt
+    - **Two modes:** calculate time-to-payoff from a fixed payment, or the payment needed for a target payoff date
+    - **Formula:** `monthly_interest = balance * (APR / 12)`
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Months to Payoff:** how many months until the balance reaches zero
+    - **Total Interest:** the cumulative interest paid over the life of the debt
+    - **Total Amount Paid:** principal + total interest
+    - **Balance Over Time chart:** shows the declining balance each month
+    - **Principal vs Interest chart:** stacked bars showing how each payment splits between principal and interest
+    """)
+
 # ── Mode selection ─────────────────────────────────────────────────────────
 mode = st.radio(
     "What do you want to calculate?",

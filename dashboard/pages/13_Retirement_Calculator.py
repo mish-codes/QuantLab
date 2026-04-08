@@ -14,6 +14,22 @@ render_sidebar()
 st.set_page_config(page_title="Retirement Calculator", layout="wide")
 st.title("Retirement Calculator")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Compound growth:** each month, balance grows by `balance * (1 + monthly_rate)` plus your contribution
+    - **Monte Carlo mode:** runs 500 simulations with randomized returns to show a range of outcomes
+    - **Reverse mode:** uses the future-value formula to solve for the monthly contribution needed to hit a target
+    - **Formula:** `FV = PV * (1+r)^n + PMT * ((1+r)^n - 1) / r`
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Projected Balance:** your estimated savings at retirement age (deterministic path)
+    - **Total Contributions:** the sum of your initial savings plus all monthly deposits
+    - **P10 / P50 / P90 bands:** Monte Carlo percentile outcomes -- P10 is pessimistic, P50 median, P90 optimistic
+    - **Target line:** green dotted line showing your goal; green/red message tells you if you are on track
+    """)
+
 # -- Mode selection ------------------------------------------------------------
 mode = st.radio(
     "What do you want to calculate?",

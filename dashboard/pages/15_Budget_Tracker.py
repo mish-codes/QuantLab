@@ -15,6 +15,22 @@ render_sidebar()
 st.set_page_config(page_title="Budget Tracker", layout="wide")
 st.title("Budget Tracker")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Surplus/deficit:** `surplus = income - sum(all expenses)`
+    - **Category percentages:** each category's amount divided by total income
+    - **Plan mode:** sets a savings target first, then checks if your spending allows it
+    - **Editable table:** add, remove, or modify expense categories and amounts
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Surplus / Deficit:** positive means money left over, negative means overspending
+    - **Spending pie chart:** shows each category's share of total spending
+    - **% of Income bar chart:** each category as a percentage of your gross income
+    - **Savings target check (plan mode):** tells you whether your budget meets your savings goal
+    """)
+
 # -- Mode selection ------------------------------------------------------------
 mode = st.radio(
     "What do you want to do?",

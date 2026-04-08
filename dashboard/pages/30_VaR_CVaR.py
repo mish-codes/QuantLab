@@ -17,6 +17,22 @@ render_sidebar()
 st.set_page_config(page_title="VaR & CVaR", layout="wide")
 st.title("Value at Risk & Conditional VaR")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Historical VaR:** sorts past daily returns and picks the percentile matching your confidence level
+    - **Parametric VaR:** assumes returns follow a normal distribution; uses `mean + z_score * std`
+    - **CVaR (Expected Shortfall):** the average of all returns that fall below the VaR threshold
+    - **Confidence level:** e.g., 95% means "the worst daily loss you'd expect 19 out of 20 days"
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Historical VaR:** maximum expected daily loss at the chosen confidence (e.g., -2.1% at 95%)
+    - **CVaR:** average loss on the worst days beyond VaR -- captures tail risk severity
+    - **Daily Volatility:** standard deviation of daily returns, a measure of overall risk
+    - **Histogram:** distribution of daily returns with VaR (red dashed) and CVaR (dark red dotted) lines
+    """)
+
 # -- Inputs -------------------------------------------------------------------
 col1, col2, col3 = st.columns(3)
 

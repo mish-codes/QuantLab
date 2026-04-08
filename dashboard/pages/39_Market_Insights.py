@@ -18,6 +18,22 @@ render_sidebar()
 st.set_page_config(page_title="Market Insights", layout="wide")
 st.title("Market Insights -- Sentiment vs Price")
 
+with st.expander("How it works"):
+    st.markdown("""
+    - **Sentiment scoring:** each headline is scored with VADER on a -1 (negative) to +1 (positive) scale
+    - **Date alignment:** headlines are matched to the nearest trading day's stock data
+    - **Correlation:** Pearson correlation between headline sentiment and the stock's next-day return
+    - **Input format:** `YYYY-MM-DD | headline text` -- one per line
+    """)
+
+with st.expander("What the outputs mean"):
+    st.markdown("""
+    - **Average Sentiment:** mean VADER score across all headlines -- positive = overall optimistic tone
+    - **Sentiment-Return Correlation:** how closely sentiment tracks next-day price moves (-1 to +1; near 0 = weak link)
+    - **Dual-axis chart:** stock price (blue line, left axis) with sentiment bars (green/red, right axis) overlaid by date
+    - **Top Positive / Negative headlines:** the five most bullish and bearish headlines by sentiment score
+    """)
+
 # -- Inputs --------------------------------------------------------------------
 col1, col2 = st.columns(2)
 
