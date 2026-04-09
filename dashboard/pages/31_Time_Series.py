@@ -68,14 +68,16 @@ with tab_app:
         with st.spinner(f"Loading {ticker}..."):
             prices = load_prices(ticker, period)
 
-        if prices.empty or len(prices) < 260:
-            st.error(f"Need at least 260 trading days. Got {len(prices)} for **{ticker}**.")
+        if prices.empty or len(prices) < 60:
+            st.error(f"Need at least 60 trading days. Got {len(prices)} for **{ticker}**.")
             _stop = True
 
     if not _stop:
         # -- Decompose ----------------------------------------------------------------
+        # Use period that fits the data: 252 if enough data, else half the observations
+        decomp_period = 252 if len(prices) >= 504 else min(126, len(prices) // 2 - 1)
         try:
-            decomp = seasonal_decompose(prices, model="multiplicative", period=252)
+            decomp = seasonal_decompose(prices, model="multiplicative", period=decomp_period)
         except ValueError as e:
             st.error(f"Decomposition failed: {e}")
             _stop = True
@@ -101,7 +103,7 @@ with tab_app:
                                      mode="markers", marker=dict(size=3, color="red")), row=4, col=1)
 
             fig.update_layout(height=700, margin=dict(t=60, b=30), showlegend=False,
-                              title=f"{ticker} Multiplicative Decomposition (period=252)")
+                              title=f"{ticker} Multiplicative Decomposition (period={decomp_period})")
             st.plotly_chart(fig, use_container_width=True)
 
         with tab2:
