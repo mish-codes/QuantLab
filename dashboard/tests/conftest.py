@@ -85,6 +85,7 @@ def mock_requests():
         resp = MagicMock()
         resp.status_code = 200
         resp.raise_for_status = MagicMock()
+        resp.text = ""
 
         if "coingecko" in url:
             resp.json.return_value = {
@@ -123,6 +124,12 @@ def mock_requests():
                     }
                 ]
             }
+        elif "bankofengland" in url:
+            resp.text = "DATE,IUDSNPY\n02/Jan/2025,4.70\n03/Jan/2025,4.70\n06/Jan/2025,4.695\n07/Jan/2025,4.695\n08/Jan/2025,4.695\n"
+        elif "ecb.europa" in url:
+            resp.text = "KEY,FREQ,REF_AREA,INSTRUMENT_TYPE,MATURITY,DATA_TYPE_FM,TIME_PERIOD,OBS_VALUE\nEST.B.EU000A2X2A25.WT,,,,,,2025-01-02,2.90\nEST.B.EU000A2X2A25.WT,,,,,,2025-01-03,2.90\nEST.B.EU000A2X2A25.WT,,,,,,2025-01-06,2.65\n"
+        elif "newyorkfed" in url:
+            resp.text = "effectiveDate,percentRate\n2025-01-02,4.33\n2025-01-03,4.33\n2025-01-06,4.33\n"
         elif "render" in url or "localhost" in url:
             resp.json.return_value = {"status": "ok"}
         else:

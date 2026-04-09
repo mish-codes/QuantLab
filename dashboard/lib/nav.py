@@ -46,6 +46,7 @@ def _render_sidebar_impl():
     st.sidebar.page_link("pages/24_Personal_Finance.py", label="Personal Finance")
     st.sidebar.page_link("pages/25_ESG_Tracker.py", label="ESG Tracker")
     st.sidebar.page_link("pages/26_Financial_Reporting.py", label="Financial Reporting")
+    st.sidebar.page_link("pages/40_Benchmark_Rates.py", label="Benchmark Rates")
 
     # Mini Projects — ML & Quant
     st.sidebar.caption("ML & Quantitative")
