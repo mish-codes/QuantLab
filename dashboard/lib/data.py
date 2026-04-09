@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 import yfinance as yf
 import requests
@@ -96,3 +98,83 @@ SAMPLE_ESG_DATA = pd.DataFrame({
 SAMPLE_ESG_DATA["ESG_Total"] = (
     SAMPLE_ESG_DATA["E_Score"] + SAMPLE_ESG_DATA["S_Score"] + SAMPLE_ESG_DATA["G_Score"]
 ) / 3
+
+# ---------------------------------------------------------------------------
+# Benchmark overnight rates (SONIA, €STR, SOFR)
+# ---------------------------------------------------------------------------
+
+_DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "benchmark_rates"
+
+
+def fetch_sonia(start: str = "2024-01-01", end: str = "") -> pd.DataFrame:
+    """Fetch SONIA rates from the Bank of England."""
+    if not end:
+        end = pd.Timestamp.today().strftime("%Y-%m-%d")
+    url = (
+        "https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp"
+        "?csv.x=yes&Datefrom={start}&Dateto={end}"
+        "&SeriesCodes=IUDSNPY&CSVF=TN&UsingCodes=Y"
+    ).format(start=start.replace("-", "/"), end=end.replace("-", "/"))
+    try:
+        df = pd.read_csv(url, parse_dates=["DATE"], dayfirst=True)
+        df.columns = ["date", "rate"]
+        df["rate"] = pd.to_numeric(df["rate"], errors="coerce")
+        df = df.dropna().sort_values("date").reset_index(drop=True)
+        return df
+    except Exception:
+        return _load_fallback("sonia_sample.csv")
+
+
+def fetch_estr(start: str = "2024-01-01", end: str = "") -> pd.DataFrame:
+    """Fetch euro short-term rate (€STR) from the ECB."""
+    if not end:
+        end = pd.Timestamp.today().strftime("%Y-%m-%d")
+    try:
+        r = requests.get(
+            "https://data-api.ecb.europa.eu/service/data/EST/"
+            "B.EU000A2X2A25.WT?format=csvdata"
+            f"&startPeriod={start}&endPeriod={end}",
+            timeout=15,
+        )
+        r.raise_for_status()
+        from io import StringIO
+        df = pd.read_csv(StringIO(r.text))
+        df = df[["TIME_PERIOD", "OBS_VALUE"]].rename(
+            columns={"TIME_PERIOD": "date", "OBS_VALUE": "rate"}
+        )
+        df["date"] = pd.to_datetime(df["date"])
+        df["rate"] = pd.to_numeric(df["rate"], errors="coerce")
+        df = df.dropna().sort_values("date").reset_index(drop=True)
+        return df
+    except Exception:
+        return _load_fallback("estr_sample.csv")
+
+
+def fetch_sofr(start: str = "2024-01-01", end: str = "") -> pd.DataFrame:
+    """Fetch SOFR from the New York Fed."""
+    if not end:
+        end = pd.Timestamp.today().strftime("%Y-%m-%d")
+    url = (
+        "https://markets.newyorkfed.org/api/rates/secured/sofr/search.csv"
+        f"?startDate={start}&endDate={end}&type=rate"
+    )
+    try:
+        df = pd.read_csv(url)
+        df = df[["effectiveDate", "percentRate"]].rename(
+            columns={"effectiveDate": "date", "percentRate": "rate"}
+        )
+        df["date"] = pd.to_datetime(df["date"])
+        df["rate"] = pd.to_numeric(df["rate"], errors="coerce")
+        df = df.dropna().sort_values("date").reset_index(drop=True)
+        return df
+    except Exception:
+        return _load_fallback("sofr_sample.csv")
+
+
+def _load_fallback(filename: str) -> pd.DataFrame:
+    """Load bundled CSV fallback when an API is unavailable."""
+    path = _DATA_DIR / filename
+    if path.exists():
+        df = pd.read_csv(path, parse_dates=["date"])
+        return df
+    return pd.DataFrame(columns=["date", "rate"])
