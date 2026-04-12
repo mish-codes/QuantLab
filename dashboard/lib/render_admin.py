@@ -1,6 +1,6 @@
 """Render REST API client for recreating the free-tier Postgres.
 
-Free Render Postgres expires 90 days after creation. This module lets the
+Free Render Postgres expires 30 days after creation. This module lets the
 admin page delete the old DB, create a fresh one with the same name, rewire
 the web service's DATABASE_URL env var, and trigger a redeploy — in one click.
 

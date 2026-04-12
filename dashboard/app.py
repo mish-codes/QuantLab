@@ -83,15 +83,16 @@ with tab_app:
 |---------|-----|---------|-------|
 | Dashboard | [finbytes.streamlit.app](https://finbytes.streamlit.app) | Streamlit Cloud | Free, auto-deploys from master |
 | Scanner API | [finbytes-scanner.onrender.com](https://finbytes-scanner.onrender.com) | Render Free Tier | Sleeps after 15min idle |
-| Scanner DB | Internal (Render) | Render PostgreSQL Free | **Expires 90 days after creation** |
+| Scanner DB | Internal (Render) | Render PostgreSQL Free | **Expires 30 days after creation** |
 | CI | [GitHub Actions](https://github.com/{GITHUB_REPO}/actions) | GitHub Free | 2000 mins/month |
 | Blog | [FinBytes](https://mish-codes.github.io/FinBytes/) | GitHub Pages | Free |
 """)
 
     st.warning(
-        "**Render PostgreSQL free tier expires after 90 days.** "
-        "If a project's Database check shows red, recreate the database on Render. "
-        "See `docs/MAINTENANCE.md` for step-by-step instructions."
+        "**Render PostgreSQL free tier expires after 30 days.** "
+        "If a project's Database check shows red, recreate the database via the "
+        "Churros admin page (Render DB tab) — one-click delete/create/redeploy. "
+        "See `docs/MAINTENANCE.md`."
     )
 
     st.markdown("---")

@@ -3,7 +3,7 @@
 Password-gated page with four tabs:
     Status        — read-only overview of all services
     AWS Controls  — start/stop the RDS PostgreSQL instance
-    Render DB     — one-click recreate of the 90-day Render Postgres
+    Render DB     — one-click recreate of the 30-day Render Postgres
     Tests         — frontend test results
 
 Required st.secrets keys:
@@ -163,20 +163,25 @@ if not render_missing:
 
 
 def _render_days_left() -> tuple[int | None, str]:
-    """Return (days_left, status) for the current Render DB, or (None, error)."""
+    """Return (days_left, status) using expiresAt from the Render API.
+
+    Free Render Postgres expires 30 days after creation, not 90 —
+    but we read ``expiresAt`` directly so changes to Render's policy
+    don't break this.
+    """
     if not render_client or not render_cfg:
         return None, "not configured"
     try:
         info = render_client.get_postgres(render_cfg.postgres_id)
     except RenderError as exc:
         return None, f"read error: {exc}"
-    created_raw = info.get("createdAt")
-    if not created_raw:
+    expires_raw = info.get("expiresAt")
+    if not expires_raw:
         return None, info.get("status", "?")
     try:
-        created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
-        age_days = (datetime.now(timezone.utc) - created_dt).days
-        return 90 - age_days, info.get("status", "?")
+        expires_dt = datetime.fromisoformat(expires_raw.replace("Z", "+00:00"))
+        days_left = (expires_dt - datetime.now(timezone.utc)).days
+        return days_left, info.get("status", "?")
     except ValueError:
         return None, info.get("status", "?")
 
@@ -280,7 +285,7 @@ with tab_aws:
 with tab_render:
     st.subheader("Render PostgreSQL")
     st.caption(
-        "Free Render Postgres expires 90 days after creation. Recreate the DB "
+        "Free Render Postgres expires 30 days after creation. Recreate the DB "
         "with the same name and rewire DATABASE_URL in one click."
     )
 
@@ -316,17 +321,23 @@ with tab_render:
             st.markdown(f"**Status:** :{badge}[**{rstatus}**]  ·  "
                         f"**Name:** `{info.get('name', '?')}`")
 
+            expires_raw = info.get("expiresAt")
             created_raw = info.get("createdAt")
-            if created_raw:
+            if expires_raw:
                 try:
-                    created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
-                    age_days = (datetime.now(timezone.utc) - created_dt).days
-                    days_left = 90 - age_days
-                    colour = "red" if days_left < 14 else "orange" if days_left < 30 else "green"
-                    st.markdown(f"**Days until 90-day expiry:** :{colour}[**{days_left}**]")
-                    st.caption(f"Created {created_dt:%Y-%m-%d} ({age_days} days ago)")
+                    expires_dt = datetime.fromisoformat(expires_raw.replace("Z", "+00:00"))
+                    days_left = (expires_dt - datetime.now(timezone.utc)).days
+                    colour = "red" if days_left < 7 else "orange" if days_left < 14 else "green"
+                    st.markdown(f"**Days until expiry:** :{colour}[**{days_left}**]")
+                    st.caption(f"Expires {expires_dt:%Y-%m-%d}")
+                    if created_raw:
+                        try:
+                            created_dt = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
+                            st.caption(f"Created {created_dt:%Y-%m-%d}")
+                        except ValueError:
+                            pass
                 except ValueError:
-                    st.caption(f"Created: {created_raw}")
+                    st.caption(f"Expires: {expires_raw}")
 
             with st.expander("Advanced"):
                 st.markdown(f"**DB id:** `{render_cfg.postgres_id}`")

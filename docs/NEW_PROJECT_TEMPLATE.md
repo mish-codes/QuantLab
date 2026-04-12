@@ -155,7 +155,7 @@ tests/
 ### PostgreSQL Database
 1. Render dashboard → New → PostgreSQL
 2. Name: `finbytes-<project>-db`
-3. Plan: Free (90-day expiry — recreate when it expires)
+3. Plan: Free (30-day expiry — recreate via Churros admin page when it expires)
 4. Copy the **Internal Database URL**
 
 ### Web Service
@@ -369,36 +369,44 @@ Update `README.md` Projects table:
 | GitHub Pages | Free | Unlimited |
 | Streamlit Community Cloud | Free | Unlimited |
 | Render Web Service | Free per service | Sleeps after 15min idle |
-| Render PostgreSQL | Free per DB | **90-day expiry — recreate** |
+| Render PostgreSQL | Free per DB | **30-day expiry — recreate** |
 | GitHub Actions | Free | 2000 mins/month total |
 | Anthropic API | $5 free then pay-as-go | Set monthly cap in console |
 
 ---
 
-## 11. Render PostgreSQL — 90-Day Renewal
+## 11. Render PostgreSQL — 30-Day Renewal
 
-The free PostgreSQL database expires after 90 days. The System Health dashboard will show the Database check as red when this happens.
+The free PostgreSQL database expires after 30 days. The System Health dashboard will show the Database check as red when this happens.
 
-### How to recreate
+### How to recreate (automated)
+
+1. Open the [Churros admin page](https://finbytes.streamlit.app/Churros) and unlock
+2. Go to the **Render DB** tab
+3. Type the DB name to confirm and click **Recreate database now**
+4. Watch the 6-step progress — delete, create, rewire `DATABASE_URL`, redeploy
+5. Update `render.postgres_id` in Streamlit secrets to the new `dpg-...` id shown
+
+### How to recreate (manual fallback)
 
 1. Go to [render.com](https://render.com) → Dashboard
-2. The expired database will show a warning. Delete it.
+2. Delete the expired database
 3. Click **New** → **PostgreSQL**
    - Name: `finbytes-<project>-db` (same name as before)
-   - Plan: Free
+   - Plan: Free · Region: match original
 4. Copy the new **Internal Database URL**
-5. Go to your **web service** (e.g., `finbytes-scanner`) → **Environment**
+5. Go to your **web service** → **Environment**
 6. Update `DATABASE_URL`:
    - Take the internal URL (starts with `postgres://`)
    - Change `postgres://` to `postgresql+asyncpg://`
    - Save
 7. Render will auto-redeploy. Tables are auto-created on startup.
-8. **Data is lost** — the new DB is empty. For a demo project this is fine. For real data, you'd need backups (paid tier).
+8. **Data is lost** — the new DB is empty. Fine for a demo.
 
 ### When to do it
 - The System Health page shows Database as red
-- Roughly every 90 days from creation
-- Current scanner DB was created on 2026-04-03
+- Roughly every 30 days from creation
+- Current scanner DB was created on 2026-04-03, expires 2026-05-03
 
 ---
 
