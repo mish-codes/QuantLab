@@ -186,3 +186,84 @@ def matplotlib_returns_histogram(df: pd.DataFrame):
     ax.set_ylabel("Frequency")
     fig.tight_layout()
     return fig
+
+
+# ── Altair ──────────────────────────────────────────────────────────
+
+def _altair_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Reset index so Altair can use the Date column."""
+    out = df.reset_index()
+    out.columns = [c if c != df.index.name and c != "Date" else "Date" for c in out.columns]
+    if "Date" not in out.columns:
+        out = out.rename(columns={out.columns[0]: "Date"})
+    return out
+
+
+def altair_line_chart(df: pd.DataFrame):
+    """Close price line chart using Altair."""
+    import altair as alt
+
+    source = _altair_df(df)
+    outliers_mask = detect_outliers(df)["Close"]
+    source["is_outlier"] = outliers_mask.values
+
+    line = alt.Chart(source).mark_line(color="#2a7ae2").encode(
+        x=alt.X("Date:T", title="Date"),
+        y=alt.Y("Close:Q", title="Price"),
+    )
+    points = alt.Chart(source[source["is_outlier"]]).mark_point(
+        color="red", size=100, shape="cross",
+    ).encode(x="Date:T", y="Close:Q")
+
+    return (line + points).properties(title="Close Price (Altair)", width="container")
+
+
+def altair_candlestick(df: pd.DataFrame):
+    """OHLC candlestick chart using Altair (rule + bar layers)."""
+    import altair as alt
+
+    source = _altair_df(df)
+    source["color"] = ["green" if c >= o else "red"
+                        for c, o in zip(source["Close"], source["Open"])]
+
+    rule = alt.Chart(source).mark_rule().encode(
+        x="Date:T",
+        y="Low:Q",
+        y2="High:Q",
+        color=alt.Color("color:N", scale=None),
+    )
+    bar = alt.Chart(source).mark_bar(size=6).encode(
+        x="Date:T",
+        y="Open:Q",
+        y2="Close:Q",
+        color=alt.Color("color:N", scale=None),
+    )
+    return (rule + bar).properties(title="Candlestick (Altair)", width="container")
+
+
+def altair_volume_bar(df: pd.DataFrame):
+    """Volume bar chart using Altair."""
+    import altair as alt
+
+    source = _altair_df(df)
+    source["color"] = ["#2a7ae2" if c >= o else "#e24a4a"
+                        for c, o in zip(source["Close"], source["Open"])]
+
+    return alt.Chart(source).mark_bar().encode(
+        x=alt.X("Date:T", title="Date"),
+        y=alt.Y("Volume:Q", title="Volume"),
+        color=alt.Color("color:N", scale=None),
+    ).properties(title="Volume (Altair)", width="container")
+
+
+def altair_returns_histogram(df: pd.DataFrame):
+    """Daily returns histogram using Altair."""
+    import altair as alt
+
+    returns = compute_daily_returns(df)
+    source = pd.DataFrame({"Return": returns.values})
+
+    return alt.Chart(source).mark_bar(color="#2a7ae2", opacity=0.75).encode(
+        x=alt.X("Return:Q", bin=alt.Bin(maxbins=40), title="Return"),
+        y=alt.Y("count()", title="Frequency"),
+    ).properties(title="Daily Returns Distribution (Altair)", width="container")

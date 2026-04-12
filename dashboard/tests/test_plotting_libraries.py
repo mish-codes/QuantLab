@@ -79,3 +79,33 @@ class TestMatplotlibCharts:
 
         fig = matplotlib_returns_histogram(sample_ohlcv)
         assert fig is not None
+
+
+class TestAltairCharts:
+    def test_line_chart_returns_chart(self, sample_ohlcv):
+        from lib.plotting import altair_line_chart
+        import altair as alt
+
+        chart = altair_line_chart(sample_ohlcv)
+        assert isinstance(chart, (alt.Chart, alt.LayerChart))
+
+    def test_candlestick_returns_chart(self, sample_ohlcv):
+        from lib.plotting import altair_candlestick
+        import altair as alt
+
+        chart = altair_candlestick(sample_ohlcv)
+        assert isinstance(chart, (alt.Chart, alt.LayerChart))
+
+    def test_volume_bar_returns_chart(self, sample_ohlcv):
+        from lib.plotting import altair_volume_bar
+        import altair as alt
+
+        chart = altair_volume_bar(sample_ohlcv)
+        assert isinstance(chart, (alt.Chart, alt.LayerChart))
+
+    def test_returns_histogram_returns_chart(self, sample_ohlcv):
+        from lib.plotting import altair_returns_histogram
+        import altair as alt
+
+        chart = altair_returns_histogram(sample_ohlcv)
+        assert isinstance(chart, (alt.Chart, alt.LayerChart))
