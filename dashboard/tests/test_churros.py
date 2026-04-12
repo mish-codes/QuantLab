@@ -1,9 +1,9 @@
-"""Frontend tests for RDS Admin page."""
+"""Frontend tests for the Churros page (RDS controls + Render DB tab)."""
 import pytest
 from streamlit.testing.v1 import AppTest
 
 
-class TestAdmin:
+class TestChurros:
     def _run(self):
         at = AppTest.from_file("pages/99_Churros.py", default_timeout=15)
         at.run()

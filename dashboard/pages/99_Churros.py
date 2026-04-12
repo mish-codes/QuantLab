@@ -359,4 +359,4 @@ with tab_render:
                 )
 
 with tab_tests:
-    render_test_tab("test_admin.py")
+    render_test_tab("test_churros.py")
