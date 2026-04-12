@@ -32,8 +32,8 @@ from plotting import (
     bokeh_returns_histogram,
 )
 
-render_sidebar()
 st.set_page_config(page_title="Plotting Libraries", page_icon="assets/logo.png", layout="wide")
+render_sidebar()
 st.title("Plotting Libraries Compared")
 
 tab_app, tab_tests = st.tabs(["App", "Tests"])
