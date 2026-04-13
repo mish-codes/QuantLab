@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
 import streamlit as st
+from tech_footer import render_tech_footer
 import pandas as pd
 import plotly.express as px
 from data import fetch_exchange_rates
@@ -122,5 +123,4 @@ with tab_tests:
     render_test_tab("test_currency_dashboard.py")
 
 # -- Tech stack ---------------------------------------------------------------
-st.markdown("---")
-st.caption("**Tech:** Python · Exchange Rate API · Plotly · Streamlit")
+render_tech_footer(["Python", "Exchange Rate API", "Plotly", "Streamlit"])

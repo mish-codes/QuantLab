@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
 import streamlit as st
+from tech_footer import render_tech_footer
 import streamlit.components.v1 as components
 from nav import render_sidebar
 
@@ -24,3 +25,6 @@ components.iframe(
     height=900,
     scrolling=True,
 )
+
+# -- Tech stack ---------------------------------------------------------------
+render_tech_footer(["Jekyll", "D3.js", "vanilla JS", "YAML", "Streamlit components"])

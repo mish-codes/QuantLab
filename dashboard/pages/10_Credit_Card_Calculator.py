@@ -1,6 +1,7 @@
 """Credit Card Payoff Calculator — two modes."""
 
 import streamlit as st
+from tech_footer import render_tech_footer
 import plotly.express as px
 import pandas as pd
 import sys
@@ -123,5 +124,4 @@ with tab_tests:
     render_test_tab("test_credit_card_calculator.py")
 
 # -- Tech stack ---------------------------------------------------------------
-st.markdown("---")
-st.caption("**Tech:** Python · NumPy · Plotly · Streamlit")
+render_tech_footer(["Python", "NumPy", "Plotly", "Streamlit"])

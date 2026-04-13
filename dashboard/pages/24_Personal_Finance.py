@@ -9,6 +9,7 @@ from test_tab import render_test_tab
 render_sidebar()
 
 import streamlit as st
+from tech_footer import render_tech_footer
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -134,5 +135,4 @@ with tab_tests:
     render_test_tab("test_personal_finance.py")
 
 # -- Tech stack ---------------------------------------------------------------
-st.markdown("---")
-st.caption("**Tech:** Python · Plotly · Streamlit")
+render_tech_footer(["Python", "Plotly", "Streamlit"])

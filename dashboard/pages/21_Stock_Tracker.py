@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
 import streamlit as st
+from tech_footer import render_tech_footer
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from data import fetch_stock_history
@@ -107,5 +108,4 @@ with tab_tests:
     render_test_tab("test_stock_tracker.py")
 
 # -- Tech stack ---------------------------------------------------------------
-st.markdown("---")
-st.caption("**Tech:** Python · yfinance · Plotly · Streamlit")
+render_tech_footer(["Python", "yfinance", "Plotly", "Streamlit"])

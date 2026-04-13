@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
 import streamlit as st
+from tech_footer import render_tech_footer
 import pandas as pd
 import numpy as np
 from data import fetch_stock_history
@@ -129,3 +130,6 @@ with tab_app:
 
 with tab_tests:
     render_test_tab("test_plotting_libraries.py")
+
+# -- Tech stack ---------------------------------------------------------------
+render_tech_footer(["Python", "yfinance", "Plotly", "Matplotlib", "Altair", "Bokeh", "Streamlit"])

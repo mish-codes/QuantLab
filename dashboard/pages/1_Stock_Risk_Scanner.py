@@ -1,4 +1,5 @@
 import streamlit as st
+from tech_footer import render_tech_footer
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
@@ -646,3 +647,6 @@ with tab_arch:
 # ============================================================
 with tab_tests:
     render_test_tab("test_stock_risk_scanner.py")
+
+# -- Tech stack ---------------------------------------------------------------
+render_tech_footer(["Python", "FastAPI", "PostgreSQL", "SQLAlchemy", "Docker", "Claude API", "yfinance", "NumPy", "Streamlit", "GitHub Actions"])

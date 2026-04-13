@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
 import streamlit as st
+from tech_footer import render_tech_footer
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -240,3 +241,6 @@ with tab_brand:
 
 with tab_tests:
     render_test_tab("test_london_house_prices.py")
+
+# -- Tech stack ---------------------------------------------------------------
+render_tech_footer(["Python", "Plotly", "GeoPandas", "OpenStreetMap", "Streamlit"])

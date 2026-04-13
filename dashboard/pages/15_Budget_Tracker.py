@@ -1,6 +1,7 @@
 """Interactive Budget Tracker -- two modes."""
 
 import streamlit as st
+from tech_footer import render_tech_footer
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -176,5 +177,4 @@ with tab_tests:
     render_test_tab("test_budget_tracker.py")
 
 # -- Tech stack ---------------------------------------------------------------
-st.markdown("---")
-st.caption("**Tech:** Python · Plotly · Streamlit")
+render_tech_footer(["Python", "Plotly", "Streamlit"])

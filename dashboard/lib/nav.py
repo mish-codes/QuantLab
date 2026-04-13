@@ -63,6 +63,10 @@ def _render_sidebar_impl():
     st.sidebar.page_link("pages/38_Stock_Prediction.py", label="Stock Prediction")
     st.sidebar.page_link("pages/39_Market_Insights.py", label="Market Insights")
 
+    # Word Tools
+    st.sidebar.caption("Word Tools")
+    st.sidebar.page_link("pages/50_Etymology.py", label="Etymology")
+
     st.sidebar.markdown("---")
     st.sidebar.page_link("app.py", label="System Health")
     st.sidebar.markdown(

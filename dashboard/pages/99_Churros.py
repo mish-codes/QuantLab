@@ -22,6 +22,7 @@ from pathlib import Path
 
 import boto3
 import streamlit as st
+from tech_footer import render_tech_footer
 from botocore.exceptions import ClientError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
@@ -418,3 +419,6 @@ st.markdown("---")
 if st.button("Log out"):
     st.session_state.admin_authed = False
     st.rerun()
+
+# -- Tech stack ---------------------------------------------------------------
+render_tech_footer(["Python", "Streamlit"])

@@ -1,6 +1,7 @@
 """Side-by-side Loan Comparison Calculator."""
 
 import streamlit as st
+from tech_footer import render_tech_footer
 import plotly.graph_objects as go
 import pandas as pd
 import sys
@@ -148,5 +149,4 @@ with tab_tests:
     render_test_tab("test_loan_comparison.py")
 
 # -- Tech stack ---------------------------------------------------------------
-st.markdown("---")
-st.caption("**Tech:** Python · NumPy · Plotly · Streamlit")
+render_tech_footer(["Python", "NumPy", "Plotly", "Streamlit"])
