@@ -52,7 +52,7 @@ def default_column_config(df: pd.DataFrame) -> dict:
     """Pick sensible numeric/string/groupby columns from the schema.
 
     - numeric: first numeric dtype column
-    - string:  first object or string dtype column
+    - string:  first non-numeric/non-datetime column
     - groupby: first string column whose nunique is less than the row count
     """
     numeric = next(
