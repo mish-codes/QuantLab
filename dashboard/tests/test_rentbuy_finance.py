@@ -262,3 +262,73 @@ def test_isa_toggle_increases_investment_income(boe_rates):
     without_isa = make_scenario(starting_cash=500_000, isa_tax_free=False)
     assert (total_cost_of_buying(with_isa, boe_rates)["investment_income"]
             > total_cost_of_buying(without_isa, boe_rates)["investment_income"])
+
+
+# ── total_cost_of_renting ───────────────────────────────────────────
+
+from lib.rentbuy.finance import total_cost_of_renting, compute_breakeven_rent
+
+
+def test_total_cost_of_renting_returns_expected_keys(boe_rates):
+    scenario = make_scenario()
+    result = total_cost_of_renting(scenario)
+    assert "total_rent" in result
+    assert "num_moves" in result
+    assert "total_moving" in result
+    assert "total_renters_ins" in result
+    assert "investment_income" in result
+    assert "total_cost" in result
+    assert "net_cost" in result
+
+
+def test_zero_rent_growth_total_is_simple_product():
+    scenario = make_scenario(monthly_rent=2_000, rent_growth=0.0, plan_to_stay_years=5)
+    result = total_cost_of_renting(scenario)
+    assert result["total_rent"] == pytest.approx(120_000, abs=1)
+
+
+def test_rent_growth_compounds():
+    scenario = make_scenario(monthly_rent=2_000, rent_growth=0.05, plan_to_stay_years=3)
+    result = total_cost_of_renting(scenario)
+    assert result["total_rent"] == pytest.approx(75_660, abs=10)
+
+
+def test_multiple_moves_with_long_term_frictions():
+    """9-year plan with 3.5y tenancy → 3 moves."""
+    scenario = make_scenario(
+        plan_to_stay_years=9, avg_tenancy_years=3.5,
+        moving_cost=500, include_long_term_frictions=True
+    )
+    result = total_cost_of_renting(scenario)
+    assert result["num_moves"] == 3
+    assert result["total_moving"] == pytest.approx(1500, abs=1)
+
+
+def test_single_move_without_long_term_frictions():
+    scenario = make_scenario(
+        plan_to_stay_years=9, avg_tenancy_years=3.5,
+        moving_cost=500, include_long_term_frictions=False
+    )
+    result = total_cost_of_renting(scenario)
+    assert result["num_moves"] == 1
+    assert result["total_moving"] == pytest.approx(500, abs=1)
+
+
+def test_rent_opportunity_cost_greater_for_cash_rich():
+    lean = make_scenario(starting_cash=10_000)
+    rich = make_scenario(starting_cash=500_000)
+    assert (total_cost_of_renting(rich)["investment_income"]
+            > total_cost_of_renting(lean)["investment_income"])
+
+
+def test_breakeven_rent_positive(boe_rates):
+    scenario = make_scenario()
+    breakeven = compute_breakeven_rent(scenario, boe_rates)
+    assert 500 < breakeven < 10_000
+
+
+def test_breakeven_rent_decreases_with_longer_stay(boe_rates):
+    """Longer stays let equity build → buying looks better → breakeven rent falls."""
+    short = compute_breakeven_rent(make_scenario(plan_to_stay_years=3), boe_rates)
+    long = compute_breakeven_rent(make_scenario(plan_to_stay_years=20), boe_rates)
+    assert short > long
