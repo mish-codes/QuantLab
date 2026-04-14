@@ -37,6 +37,9 @@ render_sidebar()
 # HTML rendering helpers
 # ─────────────────────────────────────────────────────────────
 
+import re as _re
+
+
 def _escape(s: str) -> str:
     return (
         str(s)
@@ -47,10 +50,18 @@ def _escape(s: str) -> str:
     )
 
 
+def _page_url(page_link: str) -> str:
+    """Convert a page_link like 'pages/16_Rent_vs_Buy.py' to the Streamlit
+    URL slug '/Rent_vs_Buy' that an <a href="..."> can navigate to."""
+    name = page_link.replace("pages/", "").replace(".py", "")
+    name = _re.sub(r"^\d+_", "", name)
+    return "/" + name
+
+
 def _featured_card_html(p) -> str:
     tech = " · ".join(_escape(t) for t in p.tech)
     return (
-        f'<a class="ql-featured-card" href="{_escape(p.page_link)}" target="_self">'
+        f'<a class="ql-featured-card" href="{_escape(_page_url(p.page_link))}" target="_self">'
         f'<div class="ql-featured-card-title">{_escape(p.label)}</div>'
         f'<div class="ql-featured-card-desc">{_escape(p.description)}</div>'
         f'<div class="ql-featured-card-tech">{tech}</div>'
@@ -64,7 +75,7 @@ def _cat_card_html(p) -> str:
         '<span class="ql-capstone-tag">Capstone</span>' if p.is_capstone else ""
     )
     return (
-        f'<a class="ql-cat-card" href="{_escape(p.page_link)}" target="_self">'
+        f'<a class="ql-cat-card" href="{_escape(_page_url(p.page_link))}" target="_self">'
         f'<div class="ql-cat-card-title">{_escape(p.label)}{capstone}</div>'
         f'<div class="ql-cat-card-desc">{_escape(p.description)}</div>'
         f'<div class="ql-cat-card-tech">{tech}</div>'
@@ -109,7 +120,7 @@ def _build_project_graph_html() -> str:
             "id": p.key,
             "label": p.label,
             "color": category_colors.get(cat, "#888"),
-            "url": p.page_link,
+            "url": _page_url(p.page_link),
         })
 
     # Exclude tech that appears in nearly every project — otherwise the
@@ -167,7 +178,7 @@ const link = g.append('g').attr('stroke', '#cccccc').attr('stroke-opacity', 0.5)
 
 const node = g.append('g').selectAll('g').data(nodes).enter().append('g')
   .attr('class', 'node')
-  .on('click', (ev, d) => {{ window.parent.location.href = d.url; }});
+  .on('click', (ev, d) => {{ window.top.location.href = d.url; }});
 
 node.append('circle').attr('r', 10).attr('fill', d => d.color)
   .attr('stroke', '#ffffff').attr('stroke-width', 1.5);
