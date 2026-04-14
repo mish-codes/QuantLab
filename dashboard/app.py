@@ -123,23 +123,18 @@ def _build_project_graph_html() -> str:
             "url": _page_url(p.page_link),
         })
 
-    # Exclude tech that appears in nearly every project — otherwise the
-    # graph becomes a hairball where everything connects to everything.
-    UBIQUITOUS_TECH = {
-        "python", "streamlit", "plotly", "numpy", "pandas", "scipy",
-        "matplotlib", "altair", "bokeh",
-    }
-
-    def _specific(tech_set):
-        return tech_set - UBIQUITOUS_TECH
+    # Edges only between projects in the SAME category — gives 4 clean
+    # clusters instead of a tech-stack hairball where everything connects
+    # to everything via Python/Plotly/yfinance.
+    project_to_cat = {}
+    for cat, lst in PROJECTS_BY_CATEGORY.items():
+        for p in lst:
+            project_to_cat[p.key] = cat
 
     edges = []
     for i, a in enumerate(projs):
-        a_tech = _specific(set(t.lower() for t in a.tech))
         for b in projs[i + 1:]:
-            b_tech = _specific(set(t.lower() for t in b.tech))
-            shared = a_tech & b_tech
-            if len(shared) >= 1:
+            if project_to_cat[a.key] == project_to_cat[b.key]:
                 edges.append({"source": a.key, "target": b.key})
 
     nodes_json = json.dumps(nodes)
@@ -149,8 +144,9 @@ def _build_project_graph_html() -> str:
 <!doctype html>
 <html><head><meta charset="utf-8"><style>
   body {{ margin: 0; font-family: 'Inter', sans-serif; background: #fafafa; }}
-  #graph {{ width: 100%; height: 400px; }}
+  #graph {{ width: 100%; height: 540px; }}
   text {{ font-size: 11px; fill: #1a1a1a; pointer-events: none; }}
+  a {{ text-decoration: none; }}
   .node {{ cursor: pointer; }}
   .node:hover circle {{ stroke: #d97706; stroke-width: 2; }}
 </style></head>
@@ -161,29 +157,39 @@ def _build_project_graph_html() -> str:
 const nodes = {nodes_json};
 const links = {edges_json};
 const W = document.getElementById('graph').clientWidth || 800;
-const H = 400;
+const H = 540;
 
 const svg = d3.select('#graph').append('svg')
-  .attr('viewBox', [0, 0, W, H]);
+  .attr('viewBox', [0, 0, W, H])
+  .attr('preserveAspectRatio', 'xMidYMid meet');
+
+// Zoom + pan layer
 const g = svg.append('g');
+svg.call(d3.zoom()
+  .scaleExtent([0.4, 4])
+  .on('zoom', (ev) => g.attr('transform', ev.transform))
+);
 
 const sim = d3.forceSimulation(nodes)
-  .force('link', d3.forceLink(links).id(d => d.id).distance(60))
-  .force('charge', d3.forceManyBody().strength(-180))
+  .force('link', d3.forceLink(links).id(d => d.id).distance(70).strength(0.4))
+  .force('charge', d3.forceManyBody().strength(-220))
   .force('center', d3.forceCenter(W / 2, H / 2))
-  .force('collide', d3.forceCollide().radius(22));
+  .force('collide', d3.forceCollide().radius(26));
 
-const link = g.append('g').attr('stroke', '#cccccc').attr('stroke-opacity', 0.5)
+const link = g.append('g').attr('stroke', '#d4d4d4').attr('stroke-opacity', 0.45)
   .selectAll('line').data(links).enter().append('line').attr('stroke-width', 1);
 
-const node = g.append('g').selectAll('g').data(nodes).enter().append('g')
-  .attr('class', 'node')
-  .on('click', (ev, d) => {{ window.top.location.href = d.url; }});
+// Each node is wrapped in an SVG <a target="_top"> so click navigates the
+// parent page (works across the components iframe sandbox).
+const node = g.append('g').selectAll('a').data(nodes).enter().append('a')
+  .attr('href', d => d.url)
+  .attr('target', '_top')
+  .attr('class', 'node');
 
-node.append('circle').attr('r', 10).attr('fill', d => d.color)
+node.append('circle').attr('r', 11).attr('fill', d => d.color)
   .attr('stroke', '#ffffff').attr('stroke-width', 1.5);
-node.append('text').attr('dy', 22).attr('text-anchor', 'middle')
-  .text(d => d.label.length > 16 ? d.label.slice(0,15)+'…' : d.label);
+node.append('text').attr('dy', 24).attr('text-anchor', 'middle')
+  .text(d => d.label.length > 18 ? d.label.slice(0,17)+'…' : d.label);
 
 sim.on('tick', () => {{
   link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
@@ -239,7 +245,7 @@ with tab_welcome:
     # Force-directed graph
     st.markdown('<div class="ql-graph-container">', unsafe_allow_html=True)
     try:
-        components.html(_build_project_graph_html(), height=420, scrolling=False)
+        components.html(_build_project_graph_html(), height=560, scrolling=False)
     except Exception as exc:
         st.info(f"Graph unavailable: {exc}")
     st.markdown('</div>', unsafe_allow_html=True)
