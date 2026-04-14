@@ -40,7 +40,8 @@ class TestScannerPage:
 
     def test_shows_title(self):
         at = self._run_scanner()
-        assert any("Stock Risk Scanner" in t.value for t in at.title)
+        markdown_blobs = " ".join(m.value for m in at.markdown)
+        assert "ql-page-title" in markdown_blobs
 
     def test_has_three_tabs(self):
         at = self._run_scanner()
