@@ -112,12 +112,23 @@ def _build_project_graph_html() -> str:
             "url": p.page_link,
         })
 
+    # Exclude tech that appears in nearly every project — otherwise the
+    # graph becomes a hairball where everything connects to everything.
+    UBIQUITOUS_TECH = {
+        "python", "streamlit", "plotly", "numpy", "pandas", "scipy",
+        "matplotlib", "altair", "bokeh",
+    }
+
+    def _specific(tech_set):
+        return tech_set - UBIQUITOUS_TECH
+
     edges = []
     for i, a in enumerate(projs):
-        a_tech = set(t.lower() for t in a.tech)
+        a_tech = _specific(set(t.lower() for t in a.tech))
         for b in projs[i + 1:]:
-            b_tech = set(t.lower() for t in b.tech)
-            if len(a_tech & b_tech) >= 2:
+            b_tech = _specific(set(t.lower() for t in b.tech))
+            shared = a_tech & b_tech
+            if len(shared) >= 1:
                 edges.append({"source": a.key, "target": b.key})
 
     nodes_json = json.dumps(nodes)
