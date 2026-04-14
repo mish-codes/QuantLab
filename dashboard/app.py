@@ -123,18 +123,24 @@ def _build_project_graph_html() -> str:
             "url": _page_url(p.page_link),
         })
 
-    # Edges only between projects in the SAME category — gives 4 clean
-    # clusters instead of a tech-stack hairball where everything connects
-    # to everything via Python/Plotly/yfinance.
-    project_to_cat = {}
-    for cat, lst in PROJECTS_BY_CATEGORY.items():
-        for p in lst:
-            project_to_cat[p.key] = cat
+    # Connect projects that share at least one specific (non-ubiquitous)
+    # tech. Excluding Python/Plotly/Streamlit/etc keeps the graph from
+    # becoming a hairball while still showing real cross-project links
+    # (e.g. yfinance projects clustering, scikit-learn projects clustering).
+    UBIQUITOUS_TECH = {
+        "python", "streamlit", "plotly", "numpy", "pandas", "scipy",
+        "matplotlib", "altair", "bokeh",
+    }
+
+    def _specific(tech_set):
+        return tech_set - UBIQUITOUS_TECH
 
     edges = []
     for i, a in enumerate(projs):
+        a_tech = _specific(set(t.lower() for t in a.tech))
         for b in projs[i + 1:]:
-            if project_to_cat[a.key] == project_to_cat[b.key]:
+            b_tech = _specific(set(t.lower() for t in b.tech))
+            if len(a_tech & b_tech) >= 1:
                 edges.append({"source": a.key, "target": b.key})
 
     nodes_json = json.dumps(nodes)
@@ -170,7 +176,15 @@ svg.call(d3.zoom()
   .on('zoom', (ev) => g.attr('transform', ev.transform))
 );
 
+// Spread nodes across 80% of the canvas before the simulation starts,
+// so the first frame doesn't show everything clumped at (0,0).
+nodes.forEach(n => {{
+  n.x = W * (0.1 + Math.random() * 0.8);
+  n.y = H * (0.1 + Math.random() * 0.8);
+}});
+
 const sim = d3.forceSimulation(nodes)
+  .alpha(0.5)  // lower starting energy so they settle gently, not explode
   .force('link', d3.forceLink(links).id(d => d.id).distance(70).strength(0.4))
   .force('charge', d3.forceManyBody().strength(-220))
   .force('center', d3.forceCenter(W / 2, H / 2))
