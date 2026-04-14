@@ -179,11 +179,14 @@ const sim = d3.forceSimulation(nodes)
 const link = g.append('g').attr('stroke', '#d4d4d4').attr('stroke-opacity', 0.45)
   .selectAll('line').data(links).enter().append('line').attr('stroke-width', 1);
 
-// Each node is wrapped in an SVG <a target="_top"> so click navigates the
-// parent page (works across the components iframe sandbox).
+// Each node is wrapped in an SVG <a target="_blank"> — Streamlit's
+// components iframe is sandboxed without allow-top-navigation, so
+// _top/_parent throw SecurityError. _blank is the only target the
+// sandbox allows. Opens the project page in a new tab.
 const node = g.append('g').selectAll('a').data(nodes).enter().append('a')
   .attr('href', d => d.url)
-  .attr('target', '_top')
+  .attr('target', '_blank')
+  .attr('rel', 'noopener')
   .attr('class', 'node');
 
 node.append('circle').attr('r', 11).attr('fill', d => d.color)
