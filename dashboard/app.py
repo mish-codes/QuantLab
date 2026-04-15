@@ -334,7 +334,7 @@ with tab_welcome:
     st.markdown(
         '<div class="ql-hero">'
         '<h1 class="ql-hero-title">QuantLabs</h1>'
-        '<p class="ql-hero-subtitle">Interactive finance and data experiments in Python</p>'
+        '<p class="ql-hero-subtitle">A hobby project — interactive finance and data experiments in Python</p>'
         '</div>',
         unsafe_allow_html=True,
     )
