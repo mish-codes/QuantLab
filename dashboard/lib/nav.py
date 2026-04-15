@@ -323,24 +323,27 @@ h1, h1 *, h2, h2 *, h3, h3 *, h4, h4 *, h5, h5 *, h6, h6 *,
     font-size: 0.86rem;
 }
 
-/* Tighten sidebar page_link spacing to match the mockup. The testid
-   stPageLink-NavLink is on the <a> itself; the visible spacing comes
-   from the inner <p> (from stMarkdownContainer) and from the <a>'s
-   own padding. Override both. */
+/* Tighten sidebar page_link spacing to match the mockup.
+   Structure: <a stPageLink-NavLink> > <span> > <div stMarkdownContainer>
+   > <p>label</p>. Every layer can contribute spacing, so we flatten
+   them all. */
 [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {
     padding: 0.18rem 0.5rem !important;
     margin: 0 !important;
     min-height: 0 !important;
     line-height: 1.3 !important;
     font-size: 0.82rem !important;
+    display: block !important;
 }
+[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] span,
+[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] div,
+[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] [data-testid="stMarkdownContainer"],
 [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p {
+    padding: 0 !important;
     margin: 0 !important;
+    min-height: 0 !important;
     line-height: 1.3 !important;
     font-size: 0.82rem !important;
-}
-[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] [data-testid="stMarkdownContainer"] {
-    margin: 0 !important;
 }
 </style>
 """
