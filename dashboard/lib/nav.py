@@ -318,21 +318,24 @@ h1, h1 *, h2, h2 *, h3, h3 *, h4, h4 *, h5, h5 *, h6, h6 *,
     font-size: 0.86rem;
 }
 
-/* Tighten sidebar page_link spacing to match the mockup. Streamlit
-   defaults are too generous; mockup uses 0.25rem padding per link. */
-[data-testid="stSidebar"] [data-testid="stPageLink"],
-[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {
-    padding-top: 0.2rem !important;
-    padding-bottom: 0.2rem !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
+/* Tighten sidebar page_link spacing to match the mockup. The testid
+   stPageLink-NavLink is on the <a> itself; the visible spacing comes
+   from the inner <p> (from stMarkdownContainer) and from the <a>'s
+   own padding. Override both. */
+[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {
+    padding: 0.18rem 0.5rem !important;
+    margin: 0 !important;
     min-height: 0 !important;
-}
-[data-testid="stSidebar"] [data-testid="stPageLink"] a,
-[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] a {
-    padding: 0.2rem 0 !important;
-    min-height: 0 !important;
+    line-height: 1.3 !important;
     font-size: 0.82rem !important;
+}
+[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] p {
+    margin: 0 !important;
+    line-height: 1.3 !important;
+    font-size: 0.82rem !important;
+}
+[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] [data-testid="stMarkdownContainer"] {
+    margin: 0 !important;
 }
 </style>
 """
