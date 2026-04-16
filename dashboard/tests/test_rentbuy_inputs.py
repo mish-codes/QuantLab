@@ -6,6 +6,7 @@ import pytest
 from lib.rentbuy.inputs import (
     load_district_to_borough,
     load_borough_rents,
+    load_borough_rents_by_bedroom,
     load_council_tax,
     load_boe_rates,
     default_home_price,
@@ -27,6 +28,16 @@ def test_load_borough_rents_schema():
     assert len(df) > 30
 
 
+def test_load_borough_rents_by_bedroom_schema():
+    from lib.rentbuy.inputs import load_borough_rents_by_bedroom
+    df = load_borough_rents_by_bedroom()
+    assert {
+        "borough", "beds_studio", "beds_1", "beds_2", "beds_3", "beds_4plus",
+        "source_year", "source_url",
+    }.issubset(df.columns)
+    assert len(df) == 33
+
+
 def test_load_council_tax_schema():
     df = load_council_tax()
     assert {"borough", "band_a", "band_b", "band_c", "band_d", "band_e",
@@ -42,13 +53,56 @@ def test_load_boe_rates_schema():
 
 def test_default_monthly_rent_known_borough():
     rents = load_borough_rents()
-    rent = default_monthly_rent(rents, "Camden")
-    assert 1_500 < rent < 5_000
+    rents_bb = load_borough_rents_by_bedroom()
+    rent = default_monthly_rent(rents, rents_bb, borough="Camden", bedrooms="2")
+    assert 1_500 < rent < 6_000
 
 
 def test_default_monthly_rent_missing_borough_returns_fallback():
     rents = load_borough_rents()
-    rent = default_monthly_rent(rents, "NONEXISTENT")
+    rents_bb = load_borough_rents_by_bedroom()
+    rent = default_monthly_rent(
+        rents, rents_bb, borough="NONEXISTENT", bedrooms="2",
+    )
+    assert rent == 2_000
+
+
+def test_default_monthly_rent_with_bedroom_known_borough():
+    from lib.rentbuy.inputs import (
+        load_borough_rents,
+        load_borough_rents_by_bedroom,
+        default_monthly_rent,
+    )
+    rents = load_borough_rents()
+    rents_bb = load_borough_rents_by_bedroom()
+    rent = default_monthly_rent(rents, rents_bb, borough="Camden", bedrooms="2")
+    assert 2_000 < rent < 6_000
+
+
+def test_default_monthly_rent_with_bedroom_studio_smaller_than_2bed():
+    from lib.rentbuy.inputs import (
+        load_borough_rents,
+        load_borough_rents_by_bedroom,
+        default_monthly_rent,
+    )
+    rents = load_borough_rents()
+    rents_bb = load_borough_rents_by_bedroom()
+    studio = default_monthly_rent(rents, rents_bb, borough="Camden", bedrooms="studio")
+    two_bed = default_monthly_rent(rents, rents_bb, borough="Camden", bedrooms="2")
+    assert studio < two_bed
+
+
+def test_default_monthly_rent_falls_back_to_single_median_when_borough_missing():
+    from lib.rentbuy.inputs import (
+        load_borough_rents,
+        load_borough_rents_by_bedroom,
+        default_monthly_rent,
+    )
+    rents = load_borough_rents()
+    rents_bb = load_borough_rents_by_bedroom()
+    rent = default_monthly_rent(
+        rents, rents_bb, borough="NONEXISTENT", bedrooms="2",
+    )
     assert rent == 2_000
 
 
@@ -87,3 +141,56 @@ def test_default_home_price_falls_back_to_london_median():
                                 postcode_district=None,
                                 property_type="F", new_build=False)
     assert price > 0
+
+
+def test_default_home_price_with_bedrooms_filters():
+    """A 4+ bed home should default to a higher price than a 1-bed in
+    the same borough + property type."""
+    from pathlib import Path
+    import pandas as pd
+    ppd = pd.read_parquet(
+        Path(__file__).resolve().parent.parent / "data" / "london_ppd_with_bedrooms.parquet"
+    )
+    d2b = load_district_to_borough()
+    one_bed = default_home_price(
+        ppd, d2b, borough="Camden", postcode_district=None,
+        property_type="F", new_build=False, bedrooms="1",
+    )
+    four_bed = default_home_price(
+        ppd, d2b, borough="Camden", postcode_district=None,
+        property_type="F", new_build=False, bedrooms="4+",
+    )
+    assert four_bed > one_bed
+
+
+def test_default_home_price_falls_back_when_borough_missing():
+    """When the borough is unknown the function should fall through to
+    the hardcoded £500k."""
+    from pathlib import Path
+    import pandas as pd
+    ppd = pd.read_parquet(
+        Path(__file__).resolve().parent.parent / "data" / "london_ppd_with_bedrooms.parquet"
+    )
+    d2b = load_district_to_borough()
+    price = default_home_price(
+        ppd, d2b, borough="NONEXISTENT BOROUGH",
+        postcode_district=None, property_type="F",
+        new_build=False, bedrooms="2",
+    )
+    assert price == 500_000
+
+
+def test_default_home_price_without_bedrooms_uses_legacy_chain():
+    """Calling default_home_price without bedrooms should still work
+    using the existing logic (backwards compatible)."""
+    from pathlib import Path
+    import pandas as pd
+    ppd = pd.read_parquet(
+        Path(__file__).resolve().parent.parent / "data" / "london_ppd_with_bedrooms.parquet"
+    )
+    d2b = load_district_to_borough()
+    price = default_home_price(
+        ppd, d2b, borough="Camden", postcode_district=None,
+        property_type="F", new_build=False,
+    )
+    assert 200_000 < price < 5_000_000
