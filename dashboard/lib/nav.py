@@ -422,6 +422,7 @@ def _render_sidebar_impl():
     st.sidebar.markdown(
         f'<div style="{byline_style}">Built by '
         f'<a style="{link_style}" href="https://mish-codes.github.io/FinBytes/">Manisha</a>'
+        f' · <a style="{link_style}" href="https://mish-codes.github.io/FinBytes/resume/">Resume</a>'
         f'</div>',
         unsafe_allow_html=True,
     )
@@ -441,7 +442,9 @@ def _render_sidebar_impl():
         '<a style="color:#d97706;text-decoration:none;" '
         'href="https://github.com/mish-codes/QuantLab">GitHub</a> · '
         '<a style="color:#d97706;text-decoration:none;" '
-        'href="https://mish-codes.github.io/FinBytes/">Blog</a>'
+        'href="https://mish-codes.github.io/FinBytes/">Blog</a> · '
+        '<a style="color:#d97706;text-decoration:none;" '
+        'href="https://mish-codes.github.io/FinBytes/resume/">Resume</a>'
         '</div>',
         unsafe_allow_html=True,
     )
