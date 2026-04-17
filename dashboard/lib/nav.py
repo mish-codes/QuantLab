@@ -423,7 +423,6 @@ def _render_sidebar_impl():
     st.sidebar.markdown(
         f'<div style="{byline_style}">Built by '
         f'<a style="{link_style}" href="/" target="_self">Manisha</a>'
-        f' · <a style="{link_style}" href="/" target="_self">Resume</a>'
         f'</div>',
         unsafe_allow_html=True,
     )
