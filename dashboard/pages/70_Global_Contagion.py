@@ -65,3 +65,89 @@ selected_date = st.slider(
 )
 
 st.caption(f"Showing snapshot at **{selected_date}**")
+
+# ──────────────────────────────────────────────────────────────
+# Globe — pydeck ArcLayer on GlobeView
+# ──────────────────────────────────────────────────────────────
+import pydeck as pdk  # noqa: E402
+
+from contagion import correlations, globe  # noqa: E402
+
+
+def _correlations_for_date(events: pd.DataFrame, target_date) -> dict:
+    """For each destination country, compute rolling-corr(ME index, country_yield)
+    and return the value at `target_date`."""
+    me_idx = correlations.middle_east_index(events)
+    out: dict = {}
+    for country, meta in constants.DESTINATION_CITIES.items():
+        ticker = meta["ticker"]
+        country_series = (
+            events[events["ticker"] == ticker]
+            .set_index("date")["close"]
+            .sort_index()
+        )
+        if country_series.empty:
+            out[country] = 0.0
+            continue
+        # Align on common dates
+        aligned = pd.concat([me_idx, country_series], axis=1, join="inner").dropna()
+        if len(aligned) < constants.CORRELATION_WINDOW:
+            out[country] = 0.0
+            continue
+        corr = correlations.rolling_corr(
+            aligned.iloc[:, 0], aligned.iloc[:, 1],
+            window=constants.CORRELATION_WINDOW,
+        )
+        # Pick the correlation at target_date (or most recent ≤ target_date)
+        corr = corr.dropna()
+        td = pd.Timestamp(target_date).date()
+        mask = corr.index <= td
+        out[country] = float(corr[mask].iloc[-1]) if mask.any() else 0.0
+    return out
+
+
+corr_by_country = _correlations_for_date(events, selected_date)
+arc_rows = globe.build_arc_rows(corr_by_country)
+
+arc_layer = pdk.Layer(
+    "ArcLayer",
+    data=arc_rows,
+    get_source_position="source",
+    get_target_position="target",
+    get_source_color="color",
+    get_target_color="color",
+    get_width=3,
+    great_circle=True,
+    pickable=True,
+)
+
+view_state = pdk.ViewState(
+    longitude=constants.EPICENTER_LONLAT[0],
+    latitude=constants.EPICENTER_LONLAT[1],
+    zoom=1.5,
+    pitch=0,
+    bearing=0,
+)
+
+deck = pdk.Deck(
+    layers=[arc_layer],
+    initial_view_state=view_state,
+    views=[pdk.View(type="GlobeView", controller=True)],
+    map_provider=None,   # GlobeView does not use map tiles
+    tooltip={"text": "{dest_label}\nCorrelation: {correlation}"},
+)
+
+st.pydeck_chart(deck, use_container_width=True)
+
+# Correlation read-out table under the globe
+st.caption("Rolling 7-day correlation vs Middle East Risk Index")
+st.dataframe(
+    pd.DataFrame(
+        [
+            {"Country": constants.DESTINATION_CITIES[c]["label"], "Correlation": round(v, 3)}
+            for c, v in corr_by_country.items()
+        ]
+    ),
+    hide_index=True,
+    use_container_width=True,
+)
