@@ -106,6 +106,10 @@ _CAT_CHIP_STYLE = (
     "letter-spacing:0.05em;color:#6b6b6b;background:#f4f4f4;padding:2px 6px;"
     "border-radius:2px;margin-bottom:0.4rem;"
 )
+_CARD_CTA_STYLE = (
+    "font-family:'Inter',system-ui,sans-serif !important;font-size:0.68rem;"
+    "font-weight:600;color:#d97706;letter-spacing:0.04em;margin-top:0.5rem;"
+)
 _FEATURED_GRID_STYLE = (
     "display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:1rem;"
 )
@@ -127,18 +131,21 @@ def _featured_card_html(p) -> str:
 
 def _all_projects_card_html(p, category: str) -> str:
     """Card for the All projects tab — includes a category chip since these
-    cards are not grouped by category."""
+    cards are not grouped by category, plus an explicit `Open →` footer so
+    users can see that the card is clickable."""
     tech = " · ".join(_escape(t) for t in p.tech)
     capstone = (
         f'<span style="{_CAPSTONE_STYLE}">Capstone</span>' if p.is_capstone else ""
     )
     cat_chip = f'<div style="{_CAT_CHIP_STYLE}">{_escape(category)}</div>'
+    cta = f'<div style="{_CARD_CTA_STYLE}">OPEN →</div>'
     return (
         f'<a style="{_CAT_CARD_STYLE}" href="{_escape(_page_url(p.page_link))}" target="_self">'
         f'{cat_chip}'
         f'<div style="{_CAT_TITLE_STYLE}">{_escape(p.label)}{capstone}</div>'
         f'<div style="{_CAT_DESC_STYLE}">{_escape(p.description)}</div>'
         f'<div style="{_CAT_TECH_STYLE}">{tech}</div>'
+        f'{cta}'
         f'</a>'
     )
 
