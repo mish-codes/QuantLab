@@ -24,6 +24,19 @@ class Project:
 
 
 PROJECTS_BY_CATEGORY: dict = {
+    "Geopolitics & risk": [
+        Project(
+            key="global_contagion",
+            label="Global Contagion",
+            description=(
+                "Replay geopolitical shocks across a 3D globe — "
+                "bond-yield contagion from Middle East to world markets"
+            ),
+            tech=["Python", "Streamlit", "pydeck", "pandas", "yfinance"],
+            page_link="pages/70_Global_Contagion.py",
+        ),
+    ],
+
     "Personal finance & property": [
         Project(
             key="london_house_prices",
@@ -228,19 +241,6 @@ PROJECTS_BY_CATEGORY: dict = {
             tech=["Python", "AWS", "Terraform", "WebSockets", "Redis"],
             page_link="pages/40_Benchmark_Rates.py",
             is_capstone=True,
-        ),
-    ],
-
-    "Geopolitics & risk": [
-        Project(
-            key="global_contagion",
-            label="Global Contagion",
-            description=(
-                "Replay geopolitical shocks across a 3D globe — "
-                "bond-yield contagion from Middle East to world markets"
-            ),
-            tech=["Python", "Streamlit", "pydeck", "pandas", "yfinance"],
-            page_link="pages/70_Global_Contagion.py",
         ),
     ],
 
