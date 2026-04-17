@@ -29,3 +29,16 @@ Israel / Saudi / UAE 10Y yield series are not cleanly available via free
 yfinance or FRED, so the ETL substitutes the country ETFs (`EIS`, `KSA`,
 `UAE`) as a proxy for sovereign risk. The blog post should document this
 substitution.
+
+## Ticker substitutions
+
+Two FRED series were discontinued and had to be substituted:
+
+| Country | Original FRED series | Substitute | Type change |
+|---|---|---|---|
+| India | `IRLTLT01INM156N` | `INDIRLTLT01STM` | Like-for-like (same yield construct, newer series) |
+| Turkey | `IRLTLT01TRM156N` | `TUR` (iShares MSCI Turkey ETF) | Yield → equity price proxy |
+
+The Turkey substitution changes the data type from a bond yield to an equity price.
+Rolling correlations against the Middle East index will behave differently for Turkey
+than for the FRED yield countries. Document this caveat in the blog post.

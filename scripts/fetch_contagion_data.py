@@ -55,10 +55,11 @@ def _fetch_yfinance(ticker: str, start: date, end: date) -> pd.Series:
         print(f"  WARNING: yfinance returned empty for {ticker}", file=sys.stderr)
         return pd.Series(dtype=float)
     close = df["Close"]
-    # yfinance ≥1.0 returns MultiIndex columns (Price, Ticker) for single tickers too;
-    # squeeze to a plain Series.
+    # yfinance ≥1.0 returns Close as a single-column DataFrame with MultiIndex.
+    # Use .iloc[:, 0] rather than .squeeze() — .squeeze() coerces a 1-row frame
+    # to a scalar, which would then fail .rename(). This form always returns a Series.
     if isinstance(close, pd.DataFrame):
-        close = close.squeeze()
+        close = close.iloc[:, 0]
     return close.rename(ticker)
 
 
@@ -92,7 +93,11 @@ def _build_long_frame(period_key: str, start: date, end: date) -> pd.DataFrame:
     rows: list[pd.DataFrame] = []
     for ticker, role in TICKER_ROLES.items():
         print(f"  {ticker} ({role})…", file=sys.stderr)
-        s = _fetch_ticker(ticker, start, end)
+        try:
+            s = _fetch_ticker(ticker, start, end)
+        except Exception as exc:
+            print(f"  ERROR: {ticker} failed ({exc}), skipping", file=sys.stderr)
+            continue
         if s.empty:
             continue
         df = s.to_frame(name="close").reset_index()
