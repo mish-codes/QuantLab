@@ -42,3 +42,21 @@ def test_middle_east_index_averages_epicenter_tickers():
     assert len(idx) == 2
     assert idx.loc[pd.Timestamp("2020-01-01")] == pytest.approx(20.0)  # mean(10,20,30)
     assert idx.loc[pd.Timestamp("2020-01-02")] == pytest.approx(21.0)  # mean(11,21,31)
+
+
+def test_rolling_corr_window_larger_than_series_is_all_nan():
+    s1 = pd.Series([1.0, 2.0, 3.0])
+    s2 = pd.Series([2.0, 4.0, 6.0])
+    corr = correlations.rolling_corr(s1, s2, window=7)
+    assert corr.isna().all(), "Expected all-NaN when window > len(series)"
+
+
+def test_middle_east_index_empty_when_no_epicenter_rows():
+    events = pd.DataFrame({
+        "date": pd.to_datetime(["2020-01-01", "2020-01-02"]),
+        "ticker": ["^TNX", "^TNX"],
+        "asset_role": ["safe_haven", "safe_haven"],
+        "close": [1.8, 1.9],
+    })
+    idx = correlations.middle_east_index(events)
+    assert idx.empty, "Expected empty Series when no epicenter rows"
