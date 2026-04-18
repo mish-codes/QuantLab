@@ -5,6 +5,7 @@ Phase 1: data + globe + timeline. Gesture control ships in Phase 2.
 from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -24,6 +25,112 @@ st.set_page_config(
 )
 
 render_sidebar()
+
+# ──────────────────────────────────────────────────────────────
+# Page-level animations: staggered fade-in on mount, table pulse
+# on re-render. All scoped to this page's containers.
+# ──────────────────────────────────────────────────────────────
+st.markdown(
+    """
+    <style>
+    @keyframes ql-contagion-fade-in {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes ql-contagion-pulse {
+        0%   { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.45); }
+        100% { box-shadow: 0 0 0 12px rgba(217, 119, 6, 0); }
+    }
+    /* Stagger the top-level elements on first paint. nth-of-type is
+       brittle against Streamlit layout changes but good enough here —
+       the animation is cosmetic, a stale selector just means no fade. */
+    [data-testid="stMain"] [data-testid="element-container"] {
+        animation: ql-contagion-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    [data-testid="stMain"] [data-testid="element-container"]:nth-of-type(1)  { animation-delay: 0.00s; }
+    [data-testid="stMain"] [data-testid="element-container"]:nth-of-type(2)  { animation-delay: 0.06s; }
+    [data-testid="stMain"] [data-testid="element-container"]:nth-of-type(3)  { animation-delay: 0.12s; }
+    [data-testid="stMain"] [data-testid="element-container"]:nth-of-type(4)  { animation-delay: 0.18s; }
+    [data-testid="stMain"] [data-testid="element-container"]:nth-of-type(5)  { animation-delay: 0.24s; }
+    [data-testid="stMain"] [data-testid="element-container"]:nth-of-type(6)  { animation-delay: 0.30s; }
+    [data-testid="stMain"] [data-testid="element-container"]:nth-of-type(7)  { animation-delay: 0.36s; }
+    [data-testid="stMain"] [data-testid="element-container"]:nth-of-type(8)  { animation-delay: 0.42s; }
+    [data-testid="stMain"] [data-testid="element-container"]:nth-of-type(n+9) { animation-delay: 0.48s; }
+
+    /* Every time the correlation table re-renders (slider moves, period
+       toggles), a brief amber pulse radiates from it — tells the eye
+       "this just updated". */
+    [data-testid="stMain"] [data-testid="stDataFrame"] {
+        animation: ql-contagion-pulse 0.6s ease-out;
+        border-radius: 4px;
+    }
+
+    /* Progress bar under the timeline — fills from 0 to 100% based on
+       slider position. Pure visual, not interactive. */
+    .ql-contagion-progress-wrap {
+        height: 4px;
+        background: #f4f4f4;
+        border-radius: 2px;
+        margin: 0.3rem 0 0.6rem;
+        overflow: hidden;
+    }
+    .ql-contagion-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #f59e0b, #d97706);
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Event-day markers — thin track below the progress bar with a dot
+       per historical flashpoint. Dots have a hover-expand + tooltip. */
+    .ql-contagion-events-track {
+        position: relative;
+        height: 18px;
+        margin: 0 0 0.6rem;
+        padding: 0 2px;
+    }
+    .ql-contagion-event-dot {
+        position: absolute;
+        top: 4px;
+        width: 10px;
+        height: 10px;
+        margin-left: -5px;
+        background: #991b1b;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+        cursor: default;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .ql-contagion-event-dot:hover {
+        transform: scale(1.5);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        z-index: 10;
+    }
+    .ql-contagion-event-dot::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 140%;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: nowrap;
+        background: #1a1a1a;
+        color: #fff;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 0.65rem;
+        letter-spacing: 0.03em;
+        padding: 3px 8px;
+        border-radius: 3px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s ease;
+    }
+    .ql-contagion-event-dot:hover::after {
+        opacity: 1;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 render_page_header(
     "Global Contagion Command Center",
     "Visualising geopolitical-risk contagion on a 3D globe",
@@ -95,7 +202,28 @@ period_key = st.radio(
 events = _load(period_key)
 
 # ──────────────────────────────────────────────────────────────
-# Timeline slider + play button
+# Key event flashpoints per period — used to draw markers on the
+# timeline track so the slider isn't a mystery.
+# ──────────────────────────────────────────────────────────────
+_KEY_EVENTS: dict[str, list[tuple[date, str]]] = {
+    "2020_us_iran": [
+        (date(2020, 1,  3), "Soleimani strike"),
+        (date(2020, 1,  8), "Iranian missile response"),
+    ],
+    "2024_hormuz": [
+        (date(2024, 1, 11), "US/UK strike Houthis"),
+        (date(2024, 4, 13), "Iran direct strike on Israel"),
+        (date(2024, 7, 31), "Haniyeh assassination"),
+        (date(2024, 9, 17), "Pager attacks"),
+        (date(2024, 10, 1), "Iran ballistic missile attack"),
+        (date(2025, 6, 13), "Israel strikes Iran nuclear sites"),
+        (date(2025, 6, 22), "US strikes Iran nuclear sites"),
+    ],
+}
+
+
+# ──────────────────────────────────────────────────────────────
+# Timeline slider + play button + progress bar + event markers
 # ──────────────────────────────────────────────────────────────
 dates = sorted(events["date"].unique())
 if not dates:
@@ -107,13 +235,17 @@ if "contagion_date_idx" not in st.session_state:
     st.session_state.contagion_date_idx = len(dates) - 1
 if "contagion_playing" not in st.session_state:
     st.session_state.contagion_playing = False
+if "contagion_auto_rotate" not in st.session_state:
+    st.session_state.contagion_auto_rotate = False
+if "contagion_globe_bearing" not in st.session_state:
+    st.session_state.contagion_globe_bearing = 0.0
 
 # Clamp the cursor to the current period's range (period toggle may
 # have shrunk `dates`).
 if st.session_state.contagion_date_idx >= len(dates):
     st.session_state.contagion_date_idx = len(dates) - 1
 
-col_slider, col_btn = st.columns([6, 1])
+col_slider, col_btn, col_rotate = st.columns([5, 1, 2])
 with col_slider:
     idx = st.slider(
         "Date",
@@ -129,11 +261,50 @@ with col_btn:
     if st.button(btn_label, use_container_width=True):
         st.session_state.contagion_playing = not st.session_state.contagion_playing
         st.rerun()
+with col_rotate:
+    st.session_state.contagion_auto_rotate = st.checkbox(
+        "🌀 Auto-rotate",
+        value=st.session_state.contagion_auto_rotate,
+        help="Slowly spin the globe when Play is off.",
+    )
+
+# Progress bar showing how far through the period we are.
+_progress_pct = (
+    (st.session_state.contagion_date_idx / max(1, len(dates) - 1)) * 100
+)
+st.markdown(
+    f'<div class="ql-contagion-progress-wrap">'
+    f'<div class="ql-contagion-progress-bar" style="width:{_progress_pct:.1f}%"></div>'
+    f'</div>',
+    unsafe_allow_html=True,
+)
+
+# Event markers: draw each flashpoint as a dot at its proportional
+# position along the timeline, with a hover tooltip.
+_period_events = _KEY_EVENTS.get(period_key, [])
+if _period_events and dates:
+    _start, _end = dates[0], dates[-1]
+    _span_days = max(1, (_end - _start).days)
+    _dots_html = ""
+    for ev_date, ev_label in _period_events:
+        if not (_start <= ev_date <= _end):
+            continue
+        pct = ((ev_date - _start).days / _span_days) * 100
+        _dots_html += (
+            f'<div class="ql-contagion-event-dot" '
+            f'style="left:{pct:.2f}%" '
+            f'data-tooltip="{ev_date.isoformat()} · {ev_label}"></div>'
+        )
+    if _dots_html:
+        st.markdown(
+            f'<div class="ql-contagion-events-track">{_dots_html}</div>',
+            unsafe_allow_html=True,
+        )
 
 selected_date = dates[st.session_state.contagion_date_idx]
 st.caption(f"Showing snapshot at **{selected_date}**")
 
-# Auto-advance while playing
+# Auto-advance while playing — overrides auto-rotate.
 if st.session_state.contagion_playing:
     import time as _time
     _time.sleep(0.15)
@@ -141,6 +312,14 @@ if st.session_state.contagion_playing:
         st.session_state.contagion_date_idx += 1
     else:
         st.session_state.contagion_playing = False   # stop at the end
+    st.rerun()
+# Else: auto-rotate globe if the user opted in.
+elif st.session_state.contagion_auto_rotate:
+    import time as _time
+    _time.sleep(1.2)   # slow cadence — 0.83 Hz rerun, battery-friendly
+    st.session_state.contagion_globe_bearing = (
+        (st.session_state.contagion_globe_bearing + 5.0) % 360
+    )
     st.rerun()
 
 # ──────────────────────────────────────────────────────────────
@@ -219,12 +398,14 @@ arc_layer = pdk.Layer(
 # zoom=0 gives the classic "full earth as a sphere in space" look on
 # pydeck's GlobeView. Higher values flatten the curvature because the
 # viewport fills with land before the sphere edge is visible.
+# bearing is driven by session_state so the auto-rotate checkbox can
+# progressively rotate the globe between reruns.
 view_state = pdk.ViewState(
     longitude=constants.EPICENTER_LONLAT[0],
     latitude=constants.EPICENTER_LONLAT[1],
     zoom=0,
     pitch=0,
-    bearing=0,
+    bearing=st.session_state.get("contagion_globe_bearing", 0.0),
 )
 
 deck = pdk.Deck(
