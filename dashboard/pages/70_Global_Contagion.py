@@ -8,6 +8,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
@@ -158,32 +159,9 @@ st.markdown(
         animation: ql-ticker-flash 0.4s ease-out;
     }
 
-    /* Altair sparkline: transparent chrome so the dark page bleeds
-       through instead of a white card behind the line. */
-    [data-testid="stMain"] [data-testid="stVegaLiteChart"],
-    [data-testid="stMain"] [data-testid="stVegaLiteChart"] canvas,
-    [data-testid="stMain"] [data-testid="stVegaLiteChart"] svg {
-        background: transparent !important;
-    }
-
-    /* Heartbeat pulse on the altair sparkline dot + halo.
-       Earlier version used a CSS `transform: scale(...)` but CSS
-       transforms OVERRIDE the SVG `transform` attribute vega-lite uses
-       to position each symbol — the dots flew to (0,0) of the chart
-       (top-left corner). Opacity-only animation leaves vega's
-       positioning intact, so the dot pulses in place at the current
-       date cursor. Double-beat schedule (lub-dub) reads like an EKG. */
-    @keyframes ql-heartbeat {
-        0%, 100% { opacity: 1; }
-        14%      { opacity: 0.35; }
-        28%      { opacity: 1; }
-        42%      { opacity: 0.55; }
-        56%      { opacity: 1; }
-    }
-    [data-testid="stMain"] [data-testid="stVegaLiteChart"] svg g.mark-symbol path,
-    [data-testid="stMain"] [data-testid="stVegaLiteChart"] svg .mark-symbol path {
-        animation: ql-heartbeat 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    }
+    /* Sparklines are now inline SVG inside st.markdown (not altair) —
+       the heartbeat pulse runs via an <animate> tag embedded in each
+       SVG. No CSS targeting vega-embed elements needed. */
 
     /* Progress indicator under the timeline — thin greyscale bar so
        it clearly reads as "indicator", not a second slider. */
@@ -679,10 +657,10 @@ epicenter_layer = pdk.Layer(
     pickable=False,
 )
 
-# Dual arc stack for a soft neon glow. The halo is wide + very
-# low-opacity so it reads as a bloom around the trajectory; the core
-# is thin + nearly opaque so the actual path stays crisp. Stacking two
-# ArcLayers is cheaper and more reliable than post-processing effects.
+# Dual arc stack for a soft translucent glow. Halo is wide + very
+# low-opacity so it reads as a bloom; core is thin + moderately
+# translucent (not opaque) so the path stays visible without painting
+# hard lines over the globe.
 arc_halo = pdk.Layer(
     "ArcLayer",
     data=arc_rows,
@@ -690,9 +668,9 @@ arc_halo = pdk.Layer(
     get_target_position="target",
     get_source_color="color",
     get_target_color="color",
-    get_width=9,
-    width_min_pixels=4,
-    opacity=0.18,
+    get_width=8,
+    width_min_pixels=3,
+    opacity=0.10,
     great_circle=True,
     pickable=False,
 )
@@ -703,9 +681,9 @@ arc_layer = pdk.Layer(
     get_target_position="target",
     get_source_color="color",
     get_target_color="color",
-    get_width=2,
+    get_width=1.5,
     width_min_pixels=1,
-    opacity=0.9,
+    opacity=0.55,
     great_circle=True,
     pickable=True,
 )
@@ -752,7 +730,7 @@ deck = pdk.Deck(
 # + stacked sparklines (20%). Sparklines live alongside the globe
 # so the "mood gauges" frame the viz instead of being buried below.
 # ──────────────────────────────────────────────────────────────
-col_globe, col_table, col_sparks = st.columns([3, 1, 1])
+col_globe, col_table, col_sparks = st.columns([5, 1.2, 1.3])
 
 with col_globe:
     # st.pydeck_chart does NOT forward the views= config to its internal
@@ -766,7 +744,7 @@ with col_globe:
     # expression that starts with "data" and fails at the first colon.
     import re as _re
     _deck_html = _re.sub(r'"image"\s*:\s*"@@=', '"image": "', _deck_html)
-    components.html(_deck_html, height=720, scrolling=False)
+    components.html(_deck_html, height=820, scrolling=False)
 
 with col_table:
     st.caption("7-day corr vs ME index")
@@ -821,6 +799,56 @@ with col_table:
         "</table>"
     )
     st.markdown(_table_html, unsafe_allow_html=True)
+
+def _ticker_sparkline_svg(
+    full_series: pd.Series,
+    trail_series: pd.Series,
+    colour: str,
+    height: int = 66,
+) -> str:
+    """Inline SVG sparkline — faded full-period line + solid trail to
+    the selected date + a heartbeat-pulsing cursor dot.
+
+    Rendered as raw SVG inside st.markdown (not altair) because
+    Streamlit throttles updates to vega-embed components during rapid
+    st.rerun() loops, which meant the altair version visibly updated
+    only 2-3 times over a full Play. Plain markdown HTML is part of
+    the base render path and refreshes every frame. The <animate> tag
+    drives the heartbeat directly inside the SVG — no CSS keyframe
+    targeting vega-generated DOM needed.
+    """
+    if len(full_series) < 2 or len(trail_series) < 1:
+        return ""
+    values = full_series.values.astype(float)
+    vmin, vmax = float(values.min()), float(values.max())
+    span = (vmax - vmin) or 1.0
+    W = 240
+    pad = 5
+    usable_h = height - 2 * pad
+    xs = np.linspace(0, W, len(values))
+    ys = pad + (1.0 - (values - vmin) / span) * usable_h
+    pts_full = " ".join(f"{x:.1f},{y:.1f}" for x, y in zip(xs, ys))
+
+    tv = trail_series.values.astype(float)
+    tx = xs[: len(tv)]
+    ty = pad + (1.0 - (tv - vmin) / span) * usable_h
+    pts_trail = " ".join(f"{x:.1f},{y:.1f}" for x, y in zip(tx, ty))
+
+    return (
+        f'<svg viewBox="0 0 {W} {height}" preserveAspectRatio="none" '
+        f'style="width:100%;height:{height}px;display:block;overflow:visible">'
+        f'<polyline points="{pts_full}" fill="none" stroke="{colour}" '
+        f'stroke-width="1" opacity="0.22" vector-effect="non-scaling-stroke"/>'
+        f'<polyline points="{pts_trail}" fill="none" stroke="{colour}" '
+        f'stroke-width="1.8" opacity="1" vector-effect="non-scaling-stroke"/>'
+        f'<circle cx="{tx[-1]:.1f}" cy="{ty[-1]:.1f}" r="4.5" fill="{colour}" '
+        f'stroke="#f8fafc" stroke-width="1.3" vector-effect="non-scaling-stroke">'
+        f'<animate attributeName="opacity" '
+        f'values="1;0.35;1;0.55;1" dur="1.4s" repeatCount="indefinite"/>'
+        f'</circle>'
+        f'</svg>'
+    )
+
 
 with col_sparks:
     st.caption("Energy · Safe haven · Fear")
@@ -904,61 +932,19 @@ with col_sparks:
             unsafe_allow_html=True,
         )
 
-        # Altair sparkline — three layers:
-        #   1. Faded full-period line (opacity 0.22) — the whole story.
-        #   2. Solid trail up to the selected date (full opacity) —
-        #      where we are in the story.
-        #   3. A single dot at the selected date — the EKG cursor.
-        # Dropped the separate halo layer: stacking halo + dot doubled
-        # the mark-symbol <path> count, which slowed rerender under the
-        # CSS heartbeat animation. One mark_circle with a white stroke
-        # gives the dot enough visual weight on its own.
-        import altair as alt  # noqa: E402
-
-        _full_df = series_full.reset_index()
-        _full_df.columns = ["date", "close"]
-        _cur_df = series.reset_index()
-        _cur_df.columns = ["date", "close"]
-        _cursor_df = _cur_df.iloc[[-1]]
-
-        _x = alt.X("date:T", axis=None)
-        _y = alt.Y("close:Q", axis=None, scale=alt.Scale(zero=False))
-
-        _line_base = (
-            alt.Chart(_full_df)
-            .mark_line(
-                color=_colour,
-                strokeWidth=1.0,
-                opacity=0.22,
-                interpolate="monotone",
-            )
-            .encode(x=_x, y=_y)
+        # Inline SVG sparkline — faded full-period line + solid trail
+        # + pulsing cursor dot. We ditched altair here because during
+        # rapid st.rerun() loops Streamlit throttles updates to
+        # vega-embed components, so the altair sparklines only visibly
+        # updated 2-3 times across a full Play. Plain markdown HTML is
+        # part of the base render path and refreshes every frame with
+        # no component reconciliation step. The <animate> tag inside
+        # the SVG drives the heartbeat directly — no CSS keyframe
+        # targeting vega-generated nodes.
+        st.markdown(
+            _ticker_sparkline_svg(series_full, series, _colour),
+            unsafe_allow_html=True,
         )
-        _line_trail = (
-            alt.Chart(_cur_df)
-            .mark_line(
-                color=_colour,
-                strokeWidth=1.8,
-                opacity=1.0,
-                interpolate="monotone",
-            )
-            .encode(x=_x, y=_y)
-        )
-        _dot = (
-            alt.Chart(_cursor_df)
-            .mark_circle(
-                size=130, color=_colour,
-                stroke="#f8fafc", strokeWidth=1.4, opacity=1.0,
-            )
-            .encode(x=_x, y=_y)
-        )
-        _chart = (
-            alt.layer(_line_base, _line_trail, _dot)
-            .properties(height=70, background="transparent")
-            .configure_view(strokeWidth=0, fill="transparent")
-            .configure_axis(grid=False, domain=False)
-        )
-        st.altair_chart(_chart, use_container_width=True)
 
 
 # ──────────────────────────────────────────────────────────────
