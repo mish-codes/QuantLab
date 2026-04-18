@@ -128,6 +128,18 @@ st.markdown(
     .ql-contagion-event-dot:hover::after {
         opacity: 1;
     }
+
+    /* Soften the per-frame iframe reload of the globe — each rerun
+       creates a fresh components.html iframe, which used to snap in
+       abruptly. Fade-in over 250ms covers the reload. */
+    @keyframes ql-globe-fade-in {
+        from { opacity: 0.35; }
+        to   { opacity: 1; }
+    }
+    [data-testid="stMain"] iframe[title="streamlit_app"],
+    [data-testid="stMain"] .stIFrame iframe {
+        animation: ql-globe-fade-in 0.25s ease-out;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -308,7 +320,7 @@ st.caption(f"Showing snapshot at **{selected_date}**")
 # Auto-advance while playing — overrides auto-rotate.
 if st.session_state.contagion_playing:
     import time as _time
-    _time.sleep(0.15)
+    _time.sleep(0.35)   # slower default — gives the eye time to register each frame
     if st.session_state.contagion_date_idx < len(dates) - 1:
         st.session_state.contagion_date_idx += 1
     else:
@@ -387,13 +399,65 @@ def _load_countries_geojson() -> dict:
         return _json.load(f)
 
 
-countries_layer = pdk.Layer(
+# Group-specific ISO-A2 codes for colouring. Everything else stays neutral.
+_EPICENTER_ISO = {"IL", "SA", "AE", "IR"}          # crisis red
+_DESTINATION_ISO = {"IN", "TR", "DE", "US", "GB"}  # amber — the arc destinations
+
+
+@st.cache_data
+def _split_countries_by_role() -> tuple[dict, dict, dict]:
+    """Split the world GeoJSON into three FeatureCollections so we can
+    apply a different fill colour to each group."""
+    src = _load_countries_geojson()
+    epicenter: list = []
+    destination: list = []
+    rest: list = []
+    for feat in src.get("features", []):
+        iso = feat.get("properties", {}).get("ISO_A2")
+        if iso in _EPICENTER_ISO:
+            epicenter.append(feat)
+        elif iso in _DESTINATION_ISO:
+            destination.append(feat)
+        else:
+            rest.append(feat)
+    return (
+        {"type": "FeatureCollection", "features": epicenter},
+        {"type": "FeatureCollection", "features": destination},
+        {"type": "FeatureCollection", "features": rest},
+    )
+
+
+_epicenter_geo, _destination_geo, _rest_geo = _split_countries_by_role()
+
+# Three stacked layers — rest first (deepest), then highlighted groups on top
+rest_layer = pdk.Layer(
     "GeoJsonLayer",
-    data=_load_countries_geojson(),     # inline dict — no network fetch
+    data=_rest_geo,
     stroked=False,
     filled=True,
-    get_fill_color=[40, 50, 70, 220],   # dark slate — matches the dashboard theme
-    get_line_color=[80, 95, 115, 120],
+    get_fill_color=[40, 50, 70, 220],   # dark slate — neutral
+    pickable=False,
+)
+
+destination_layer = pdk.Layer(
+    "GeoJsonLayer",
+    data=_destination_geo,
+    stroked=True,
+    filled=True,
+    get_fill_color=[217, 119, 6, 200],   # amber — arc destinations
+    get_line_color=[255, 255, 255, 180],
+    line_width_min_pixels=1,
+    pickable=False,
+)
+
+epicenter_layer = pdk.Layer(
+    "GeoJsonLayer",
+    data=_epicenter_geo,
+    stroked=True,
+    filled=True,
+    get_fill_color=[153, 27, 27, 220],   # crisis red — Middle East risk region
+    get_line_color=[255, 255, 255, 200],
+    line_width_min_pixels=1,
     pickable=False,
 )
 
@@ -404,7 +468,8 @@ arc_layer = pdk.Layer(
     get_target_position="target",
     get_source_color="color",
     get_target_color="color",
-    get_width=3,
+    get_width="width",   # per-arc, scales with |correlation| — see globe.correlation_to_width
+    width_min_pixels=1.5,
     great_circle=True,
     pickable=True,
 )
@@ -417,13 +482,13 @@ arc_layer = pdk.Layer(
 view_state = pdk.ViewState(
     longitude=constants.EPICENTER_LONLAT[0],
     latitude=constants.EPICENTER_LONLAT[1],
-    zoom=0,
+    zoom=0.8,   # nudged up from 0 so the sphere fills more of the viewport
     pitch=0,
     bearing=st.session_state.get("contagion_globe_bearing", 0.0),
 )
 
 deck = pdk.Deck(
-    layers=[countries_layer, arc_layer],   # basemap first so arcs draw on top
+    layers=[rest_layer, destination_layer, epicenter_layer, arc_layer],   # basemap first so arcs draw on top
     initial_view_state=view_state,
     # pydeck's canonical class for the 3D globe is `_GlobeView` with a
     # leading underscore (deck.gl internal class name). Without the
@@ -450,7 +515,7 @@ with col_globe:
     # _GlobeView. Rendering via deck.to_html() + components.html gives
     # us deck.gl's native JS renderer which honours GlobeView correctly.
     _deck_html = deck.to_html(as_string=True, notebook_display=False)
-    components.html(_deck_html, height=550, scrolling=False)
+    components.html(_deck_html, height=720, scrolling=False)
 
 with col_table:
     st.caption("7-day corr vs ME index")
