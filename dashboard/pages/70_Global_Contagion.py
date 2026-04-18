@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 
@@ -367,15 +368,28 @@ arc_rows = globe.build_arc_rows(corr_by_country)
 
 # pydeck GlobeView with map_provider=None renders only layers we explicitly
 # add. Without a basemap we'd see arcs floating in empty 3D space, so put a
-# country-outline GeoJsonLayer behind the arcs. Natural Earth public URL.
-_WORLD_COUNTRIES_URL = (
-    "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/"
-    "ne_50m_admin_0_scale_rank.geojson"
+# country-outline GeoJsonLayer behind the arcs. The Natural Earth dataset
+# is bundled locally (assets/geojson/world_countries.geojson) rather than
+# fetched from a CDN — the deck.gl renderer cannot gracefully recover
+# when the remote CDN returns HTML instead of GeoJSON, which was breaking
+# the globe on Streamlit Cloud.
+import json as _json
+
+_COUNTRIES_GEOJSON_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "assets" / "geojson" / "world_countries.geojson"
 )
+
+
+@st.cache_data
+def _load_countries_geojson() -> dict:
+    with _COUNTRIES_GEOJSON_PATH.open(encoding="utf-8") as f:
+        return _json.load(f)
+
 
 countries_layer = pdk.Layer(
     "GeoJsonLayer",
-    data=_WORLD_COUNTRIES_URL,
+    data=_load_countries_geojson(),     # inline dict — no network fetch
     stroked=False,
     filled=True,
     get_fill_color=[40, 50, 70, 220],   # dark slate — matches the dashboard theme
@@ -431,7 +445,12 @@ deck = pdk.Deck(
 col_globe, col_table, col_sparks = st.columns([3, 1, 1])
 
 with col_globe:
-    st.pydeck_chart(deck, use_container_width=True)
+    # st.pydeck_chart does NOT forward the views= config to its internal
+    # deck.gl renderer — it always uses MapView, silently ignoring
+    # _GlobeView. Rendering via deck.to_html() + components.html gives
+    # us deck.gl's native JS renderer which honours GlobeView correctly.
+    _deck_html = deck.to_html(as_string=True, notebook_display=False)
+    components.html(_deck_html, height=550, scrolling=False)
 
 with col_table:
     st.caption("7-day corr vs ME index")
