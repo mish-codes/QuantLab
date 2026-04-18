@@ -421,25 +421,12 @@ st.caption(f"Showing snapshot at **{selected_date}**")
 # charts) sometimes outlasted the sleep, producing jagged, half-
 # repainted frames; 2-day steps mean fewer total reruns across the
 # timeline, giving Streamlit time to fully repaint each frame.
-if st.session_state.contagion_playing:
-    import time as _time
-    _time.sleep(0.2)
-    _step = 2
-    if st.session_state.contagion_date_idx < len(dates) - 1:
-        st.session_state.contagion_date_idx = min(
-            st.session_state.contagion_date_idx + _step, len(dates) - 1
-        )
-    else:
-        st.session_state.contagion_playing = False   # stop at the end
-    st.rerun()
-# Else: auto-rotate globe if the user opted in.
-elif st.session_state.contagion_auto_rotate:
-    import time as _time
-    _time.sleep(1.2)   # slow cadence — 0.83 Hz rerun, battery-friendly
-    st.session_state.contagion_globe_bearing = (
-        (st.session_state.contagion_globe_bearing + 5.0) % 360
-    )
-    st.rerun()
+# Playback state advance moved to the *bottom* of the script — see the
+# "Playback tick" block at the end of the file. If st.rerun() fires
+# here, the script halts immediately and nothing below this line
+# renders, so during Play the globe / correlation table / sparklines
+# never got a chance to redraw — which is why tickers appeared to
+# update only 2-3 times across a full Play.
 
 # ──────────────────────────────────────────────────────────────
 # Globe — pydeck ArcLayer on GlobeView
@@ -1050,3 +1037,33 @@ with st.expander(
 
 # (Sparklines now live inside the 3-column main layout above — no
 # separate bottom row.)
+
+
+# ──────────────────────────────────────────────────────────────
+# Playback tick — MUST be the last thing in the script.
+#
+# Placing `st.rerun()` here (after everything has rendered) lets each
+# frame fully paint: slider, globe iframe, correlation table,
+# sparklines, methodology expander. Earlier this block lived near the
+# top of the file, which meant during Play the rerun fired before the
+# rest of the page rendered — so the globe / table / tickers never
+# redrew mid-playback and only "caught up" when Play stopped.
+# ──────────────────────────────────────────────────────────────
+if st.session_state.contagion_playing:
+    import time as _time
+    _time.sleep(0.2)
+    _step = 2
+    if st.session_state.contagion_date_idx < len(dates) - 1:
+        st.session_state.contagion_date_idx = min(
+            st.session_state.contagion_date_idx + _step, len(dates) - 1
+        )
+    else:
+        st.session_state.contagion_playing = False
+    st.rerun()
+elif st.session_state.contagion_auto_rotate:
+    import time as _time
+    _time.sleep(1.2)
+    st.session_state.contagion_globe_bearing = (
+        (st.session_state.contagion_globe_bearing + 5.0) % 360
+    )
+    st.rerun()
