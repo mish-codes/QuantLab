@@ -37,7 +37,10 @@ def correlation_to_color(corr: float) -> tuple[int, int, int, int]:
         r = int(slate[0] + t * (green[0] - slate[0]))
         g = int(slate[1] + t * (green[1] - slate[1]))
         b = int(slate[2] + t * (green[2] - slate[2]))
-    return (r, g, b, 220)
+    # Alpha 170 (was 220) — arcs are meant to read as soft glow over
+    # the dark globe, not painted strokes. Combined with the halo/core
+    # layer opacity stack this keeps them translucent and subtle.
+    return (r, g, b, 170)
 
 
 _MIN_ARC_WIDTH: float = 1.5
