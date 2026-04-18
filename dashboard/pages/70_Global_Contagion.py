@@ -65,18 +65,18 @@ st.markdown(
         border-radius: 4px;
     }
 
-    /* Progress bar under the timeline — fills from 0 to 100% based on
-       slider position. Pure visual, not interactive. */
+    /* Progress indicator under the timeline — thin greyscale bar so
+       it clearly reads as "indicator", not a second slider. */
     .ql-contagion-progress-wrap {
-        height: 4px;
-        background: #f4f4f4;
-        border-radius: 2px;
-        margin: 0.3rem 0 0.6rem;
+        height: 2px;
+        background: #ececec;
+        border-radius: 1px;
+        margin: 0.2rem 0 0.5rem;
         overflow: hidden;
     }
     .ql-contagion-progress-bar {
         height: 100%;
-        background: linear-gradient(90deg, #f59e0b, #d97706);
+        background: #9ca3af;
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -411,8 +411,15 @@ view_state = pdk.ViewState(
 deck = pdk.Deck(
     layers=[countries_layer, arc_layer],   # basemap first so arcs draw on top
     initial_view_state=view_state,
-    views=[pdk.View(type="GlobeView", controller=True)],
-    map_provider=None,   # GlobeView does not use tile maps
+    # pydeck's canonical class for the 3D globe is `_GlobeView` with a
+    # leading underscore (deck.gl internal class name). Without the
+    # underscore pydeck silently falls back to MapView (Mercator),
+    # which is why earlier versions rendered as a flat world map.
+    views=[pdk.View(type="_GlobeView", controller=True)],
+    # cull=True is required for the sphere to render opaque — without
+    # it you see through the globe to the back side.
+    parameters={"cull": True},
+    map_provider=None,
     tooltip={"text": "{dest_label}\nCorrelation: {correlation}"},
 )
 
