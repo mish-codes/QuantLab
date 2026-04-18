@@ -368,15 +368,28 @@ arc_rows = globe.build_arc_rows(corr_by_country)
 
 # pydeck GlobeView with map_provider=None renders only layers we explicitly
 # add. Without a basemap we'd see arcs floating in empty 3D space, so put a
-# country-outline GeoJsonLayer behind the arcs. Natural Earth public URL.
-_WORLD_COUNTRIES_URL = (
-    "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/"
-    "ne_50m_admin_0_scale_rank.geojson"
+# country-outline GeoJsonLayer behind the arcs. The Natural Earth dataset
+# is bundled locally (assets/geojson/world_countries.geojson) rather than
+# fetched from a CDN — the deck.gl renderer cannot gracefully recover
+# when the remote CDN returns HTML instead of GeoJSON, which was breaking
+# the globe on Streamlit Cloud.
+import json as _json
+
+_COUNTRIES_GEOJSON_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "assets" / "geojson" / "world_countries.geojson"
 )
+
+
+@st.cache_data
+def _load_countries_geojson() -> dict:
+    with _COUNTRIES_GEOJSON_PATH.open(encoding="utf-8") as f:
+        return _json.load(f)
+
 
 countries_layer = pdk.Layer(
     "GeoJsonLayer",
-    data=_WORLD_COUNTRIES_URL,
+    data=_load_countries_geojson(),     # inline dict — no network fetch
     stroked=False,
     filled=True,
     get_fill_color=[40, 50, 70, 220],   # dark slate — matches the dashboard theme
