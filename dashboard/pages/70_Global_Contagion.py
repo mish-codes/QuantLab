@@ -65,18 +65,18 @@ st.markdown(
         border-radius: 4px;
     }
 
-    /* Progress bar under the timeline — fills from 0 to 100% based on
-       slider position. Pure visual, not interactive. */
+    /* Progress indicator under the timeline — thin greyscale bar so
+       it clearly reads as "indicator", not a second slider. */
     .ql-contagion-progress-wrap {
-        height: 4px;
-        background: #f4f4f4;
-        border-radius: 2px;
-        margin: 0.3rem 0 0.6rem;
+        height: 2px;
+        background: #ececec;
+        border-radius: 1px;
+        margin: 0.2rem 0 0.5rem;
         overflow: hidden;
     }
     .ql-contagion-progress-bar {
         height: 100%;
-        background: linear-gradient(90deg, #f59e0b, #d97706);
+        background: #9ca3af;
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -411,25 +411,61 @@ view_state = pdk.ViewState(
 deck = pdk.Deck(
     layers=[countries_layer, arc_layer],   # basemap first so arcs draw on top
     initial_view_state=view_state,
-    views=[pdk.View(type="GlobeView", controller=True)],
-    map_provider=None,   # GlobeView does not use tile maps
+    # pydeck's canonical class for the 3D globe is `_GlobeView` with a
+    # leading underscore (deck.gl internal class name). Without the
+    # underscore pydeck silently falls back to MapView (Mercator),
+    # which is why earlier versions rendered as a flat world map.
+    views=[pdk.View(type="_GlobeView", controller=True)],
+    # cull=True is required for the sphere to render opaque — without
+    # it you see through the globe to the back side.
+    parameters={"cull": True},
+    map_provider=None,
     tooltip={"text": "{dest_label}\nCorrelation: {correlation}"},
 )
 
-st.pydeck_chart(deck, use_container_width=True)
+# ──────────────────────────────────────────────────────────────
+# Main three-column layout: globe (60%) + correlation table (20%)
+# + stacked sparklines (20%). Sparklines live alongside the globe
+# so the "mood gauges" frame the viz instead of being buried below.
+# ──────────────────────────────────────────────────────────────
+col_globe, col_table, col_sparks = st.columns([3, 1, 1])
 
-# Correlation read-out table under the globe
-st.caption("Rolling 7-day correlation vs Middle East Risk Index")
-st.dataframe(
-    pd.DataFrame(
-        [
-            {"Country": constants.DESTINATION_CITIES[c]["label"], "Correlation": round(v, 3)}
-            for c, v in corr_by_country.items()
-        ]
-    ),
-    hide_index=True,
-    use_container_width=True,
-)
+with col_globe:
+    st.pydeck_chart(deck, use_container_width=True)
+
+with col_table:
+    st.caption("7-day corr vs ME index")
+    st.dataframe(
+        pd.DataFrame(
+            [
+                {"Country": constants.DESTINATION_CITIES[c]["label"], "Correlation": round(v, 3)}
+                for c, v in corr_by_country.items()
+            ]
+        ),
+        hide_index=True,
+        use_container_width=True,
+    )
+
+with col_sparks:
+    st.caption("Energy · Safe haven · Fear")
+    _panel_tickers = [
+        ("BZ=F", "Brent Crude"),
+        ("BDRY", "Baltic Dry (ETF)"),
+        ("GC=F", "Gold"),
+        ("^VIX", "VIX"),
+    ]
+    for ticker, label in _panel_tickers:
+        series = (
+            events[events["ticker"] == ticker]
+            .set_index("date")["close"]
+            .sort_index()
+        )
+        if series.empty:
+            st.markdown(f"**{label}** — *no data*")
+            continue
+        series = series[series.index <= selected_date]
+        st.markdown(f"**{label}** &nbsp; `{series.iloc[-1]:.2f}`", unsafe_allow_html=True)
+        st.line_chart(series, height=60)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -533,30 +569,5 @@ with st.expander(
     st.markdown(_safe_haven_summary(events))
 
 
-# ──────────────────────────────────────────────────────────────
-# Side panel: Brent / Baltic / Gold / VIX sparklines
-# ──────────────────────────────────────────────────────────────
-st.markdown("### Energy, Safe Haven & Fear")
-
-panel_tickers = [
-    ("BZ=F", "Brent Crude"),
-    ("BDRY", "Baltic Dry (ETF)"),
-    ("GC=F", "Gold"),
-    ("^VIX", "VIX"),
-]
-cols = st.columns(4)
-for (ticker, label), col in zip(panel_tickers, cols):
-    with col:
-        series = (
-            events[events["ticker"] == ticker]
-            .set_index("date")["close"]
-            .sort_index()
-        )
-        st.markdown(f"**{label}**")
-        if series.empty:
-            st.caption("no data")
-            continue
-        # Truncate to dates ≤ selected_date so the sparkline "plays along"
-        series = series[series.index <= selected_date]
-        st.line_chart(series, height=80)
-        st.caption(f"Latest: {series.iloc[-1]:.2f}")
+# (Sparklines now live inside the 3-column main layout above — no
+# separate bottom row.)
