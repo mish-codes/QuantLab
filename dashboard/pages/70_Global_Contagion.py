@@ -26,8 +26,54 @@ st.set_page_config(
 render_sidebar()
 render_page_header(
     "Global Contagion Command Center",
-    "Replay geopolitical shocks across a 3D globe",
+    "Visualising geopolitical-risk contagion on a 3D globe",
 )
+
+
+# ──────────────────────────────────────────────────────────────
+# Project intro — what this is, what it tracks, how to read it
+# ──────────────────────────────────────────────────────────────
+with st.expander("ℹ️ About this project — what it shows & which tickers", expanded=False):
+    st.markdown(
+        """
+        ### What this is
+
+        A replay tool for two geopolitical episodes that rattled global markets:
+        the **January 2020 US–Iran escalation** and the **2024–2026 Strait of
+        Hormuz tensions**. For each episode we fetch daily prices for a curated
+        set of tickers, compute a rolling correlation between a Middle-East
+        "risk index" and major world markets, and draw those correlations as
+        arcs on a 3D globe so you can *see* which markets caught contagion and
+        which held up.
+
+        Drag the slider (or press **▶ Play**) to watch the correlation field
+        evolve day by day. Red arcs mean a market started moving *with* the
+        Middle East (contagion); green arcs mean it moved *against* (classic
+        flight-to-safety behaviour); gray means no relationship.
+
+        ### Tickers considered
+
+        | Role | Ticker(s) | Rationale |
+        |---|---|---|
+        | **Epicenter — Middle East risk** | `EIS`, `KSA`, `UAE` (iShares MSCI ETFs) | Bond-yield series for Israel / Saudi Arabia / UAE are not cleanly available via free data; sovereign-equity ETFs proxy the same risk premium. Their daily mean forms the **Middle East Risk Index**. |
+        | **Contagion — energy-dependent economies** | `FRED:INDIRLTLT01STM` (India 10Y), `TUR` ETF (Turkey — FRED yield series discontinued), `FRED:IRLTLT01DEM156N` (Germany 10Y) | Large net importers whose sovereign risk tends to rise when oil supply is threatened. |
+        | **Safe havens** | `^TNX` (US 10Y Treasury yield), `GC=F` (Gold futures) | Canonical crisis hedges — yields fall / gold rises when capital flees risk. |
+        | **Energy link** | `BZ=F` (Brent Crude front month), `BDRY` ETF (Baltic Dry shipping proxy) | Direct transmission mechanism from Middle East supply shocks to global inflation / logistics. |
+        | **Fear gauge** | `^VIX` | S&P 500 implied volatility — the market's thermometer for stress episodes. |
+
+        Data fetched via `yfinance` and public FRED CSV endpoints, snapshotted
+        into a committed parquet (`dashboard/data/contagion/events.parquet`)
+        so the page has zero network dependencies at run time. Regenerate with
+        `python scripts/fetch_contagion_data.py`.
+
+        ### What's next
+
+        **Phase 2** (designed, not yet shipped): hand-gesture control via
+        `mediapipe` + `streamlit-webrtc` — pinch-zoom the globe, wave-rotate,
+        two-finger-scrub the timeline. See
+        `docs/superpowers/specs/2026-04-17-global-contagion-phase2-design.md`.
+        """
+    )
 
 
 @st.cache_data(ttl=60 * 60 * 24)
@@ -170,10 +216,13 @@ arc_layer = pdk.Layer(
     pickable=True,
 )
 
+# zoom=0 gives the classic "full earth as a sphere in space" look on
+# pydeck's GlobeView. Higher values flatten the curvature because the
+# viewport fills with land before the sphere edge is visible.
 view_state = pdk.ViewState(
     longitude=constants.EPICENTER_LONLAT[0],
     latitude=constants.EPICENTER_LONLAT[1],
-    zoom=1.5,
+    zoom=0,
     pitch=0,
     bearing=0,
 )
