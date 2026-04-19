@@ -629,20 +629,35 @@ epicenter_layer = pdk.Layer(
     pickable=False,
 )
 
-# Dual arc stack for a soft translucent glow. Halo is wide + very
-# low-opacity so it reads as a bloom; core is thin + moderately
-# translucent (not opaque) so the path stays visible without painting
-# hard lines over the globe.
-arc_halo = pdk.Layer(
+# Triple-layer neon-glow arc stack. Outer halo is very wide + very
+# low-opacity (bloom), middle glow fills the body with a soft haze,
+# inner core is a thin bright line. Combined they read like a neon
+# beam on the dark globe instead of three painted strokes. Width is
+# driven by each arc's correlation magnitude (ql width field) so
+# strong signals visibly thicken.
+arc_outer = pdk.Layer(
     "ArcLayer",
     data=arc_rows,
     get_source_position="source",
     get_target_position="target",
     get_source_color="color",
     get_target_color="color",
-    get_width=8,
+    get_width="width * 8",
+    width_min_pixels=6,
+    opacity=0.06,
+    great_circle=True,
+    pickable=False,
+)
+arc_glow = pdk.Layer(
+    "ArcLayer",
+    data=arc_rows,
+    get_source_position="source",
+    get_target_position="target",
+    get_source_color="color",
+    get_target_color="color",
+    get_width="width * 3",
     width_min_pixels=3,
-    opacity=0.10,
+    opacity=0.18,
     great_circle=True,
     pickable=False,
 )
@@ -653,9 +668,9 @@ arc_layer = pdk.Layer(
     get_target_position="target",
     get_source_color="color",
     get_target_color="color",
-    get_width=1.5,
+    get_width="width",
     width_min_pixels=1,
-    opacity=0.55,
+    opacity=0.95,
     great_circle=True,
     pickable=True,
 )
@@ -679,7 +694,14 @@ view_state = pdk.ViewState(
 )
 
 deck = pdk.Deck(
-    layers=[night_lights_layer, destination_layer, epicenter_layer, arc_halo, arc_layer],
+    layers=[
+        night_lights_layer,
+        destination_layer,
+        epicenter_layer,
+        arc_outer,
+        arc_glow,
+        arc_layer,
+    ],
     initial_view_state=view_state,
     # pydeck's canonical class for the 3D globe is `_GlobeView` with a
     # leading underscore (deck.gl internal class name). Without the
@@ -709,42 +731,22 @@ deck = pdk.Deck(
 col_globe, col_right = st.columns([5, 2])
 
 with col_globe:
-    # Globe-freeze-during-Play:
-    # Generating the deck HTML on every Play rerun (~5 Hz) sends ~50 KB
-    # over the websocket and causes the iframe to reload deck.gl end-
-    # to-end — user sees a jagged flicker. We cache the HTML in session
-    # state and skip regeneration during playback: identical string on
-    # every frame means Streamlit's reconciler leaves the iframe alone.
-    # The globe catches up immediately when:
-    #   * the user toggles period (cache key includes period_key)
-    #   * Play ends / user drags slider (playing flips False → rebuild)
-    #   * auto-rotate is on (bearing changes → not-playing branch runs
-    #     → cache refreshed each tick)
-    # Trade-off: during Play the arc colours + destination fills stay at
-    # the last-rendered date while the right-hand panels keep ticking
-    # live. Arc-by-arc smooth updates without iframe reload would need
-    # a bidirectional custom component (postMessage into a persistent
-    # deck.gl instance) — bigger lift, deferred.
-    _should_rebuild_globe = (
-        not st.session_state.contagion_playing
-        or "contagion_globe_html" not in st.session_state
-        or st.session_state.get("contagion_globe_cache_period") != period_key
-    )
-    if _should_rebuild_globe:
-        import re as _re
-        _fresh_html = deck.to_html(as_string=True, notebook_display=False)
-        # pydeck 0.9.1 incorrectly tags the BitmapLayer `image` prop
-        # with the "@@=" accessor-expression prefix. Strip it so deck.gl
-        # sees a plain URL string instead of trying to evaluate an
-        # expression starting with "data" (fails at the first colon).
-        _fresh_html = _re.sub(r'"image"\s*:\s*"@@=', '"image": "', _fresh_html)
-        st.session_state.contagion_globe_html = _fresh_html
-        st.session_state.contagion_globe_cache_period = period_key
-    components.html(
-        st.session_state.contagion_globe_html,
-        height=980,
-        scrolling=False,
-    )
+    # Globe rebuilt every frame so arc colours + widths + destination
+    # country fills update live with the timeline. Earlier we cached
+    # the HTML and skipped regeneration during Play to avoid the iframe-
+    # reload blink, but it made arcs feel frozen and defeated the point
+    # of the playback. The fade-in + jsDelivr-cached night-lights
+    # texture make the per-frame reload cost tolerable; true smooth
+    # arc-only updates still need a bidirectional custom component
+    # (postMessage into a persistent deck.gl instance) — deferred.
+    import re as _re
+    _deck_html = deck.to_html(as_string=True, notebook_display=False)
+    # pydeck 0.9.1 incorrectly tags the BitmapLayer `image` prop with
+    # the "@@=" accessor-expression prefix. Strip it so deck.gl sees a
+    # plain URL string instead of trying to evaluate an expression
+    # starting with "data" (fails at the first colon).
+    _deck_html = _re.sub(r'"image"\s*:\s*"@@=', '"image": "', _deck_html)
+    components.html(_deck_html, height=980, scrolling=False)
 
 with col_right:
     # Big month-year anchor above the correlation numbers — gives the
@@ -876,11 +878,16 @@ with col_right:
     # the "Energy · Safe haven · Fear" grouping is clear per-row
     # instead of being a single header that didn't line up with any
     # specific ticker.
+    # Fifth field is the hover-tooltip text — shows the instrument's
+    # full identifier. Futures (BZ=F, GC=F) and the VIX index don't
+    # have an ISIN (ISINs only exist for equities/ETFs/bonds), so we
+    # show the exchange + yfinance symbol instead. BDRY is an ETF so
+    # it gets a real ISIN.
     _panel_tickers = [
-        ("BZ=F", "Brent Crude",      "Energy",     "up_is_bad"),
-        ("BDRY", "Baltic Dry (ETF)", "Energy",     "up_is_bad"),
-        ("GC=F", "Gold",             "Safe haven", "up_is_good"),
-        ("^VIX", "VIX",              "Fear",       "up_is_bad"),
+        ("BZ=F", "Brent Crude",      "Energy",     "up_is_bad",  "ICE Brent front-month future · yfinance BZ=F"),
+        ("BDRY", "Baltic Dry (ETF)", "Energy",     "up_is_bad",  "Breakwave Dry Bulk Shipping ETF · ISIN US10965F1012"),
+        ("GC=F", "Gold",             "Safe haven", "up_is_good", "COMEX gold front-month future · yfinance GC=F"),
+        ("^VIX", "VIX",              "Fear",       "up_is_bad",  "CBOE Volatility Index · ^VIX"),
     ]
 
     def _rag_ticker(pct: float, polarity: str) -> str:
@@ -910,7 +917,7 @@ with col_right:
     # series (visible in DevTools as "WARN Infinite extent for field
     # date" coming from the vega-lite sparkline embedder).
     _sel_ts = pd.Timestamp(selected_date)
-    for ticker, label, category, polarity in _panel_tickers:
+    for ticker, label, category, polarity, tooltip in _panel_tickers:
         series = (
             events[events["ticker"] == ticker]
             .set_index("date")["close"]
@@ -944,8 +951,11 @@ with col_right:
         # trailing pct span when the line started with **bold**. The
         # ql-ticker-value class gets a brief opacity pulse each re-render
         # so the values visibly flash when the slider advances.
+        # title= on the row shows the instrument's identifier + data
+        # source as a native browser tooltip on hover — ISIN for the
+        # ETF, exchange + yfinance symbol for futures and indices.
         st.markdown(
-            f"<div class='ql-ticker-row'>"
+            f"<div class='ql-ticker-row' title=\"{tooltip}\">"
             f"<strong>{label}</strong> "
             f"<span class='ql-ticker-chip'>{category}</span> &nbsp;"
             f"<span class='ql-ticker-value' "
@@ -1068,6 +1078,65 @@ with st.expander(
         The 🟢 arcs to **New York** and **London** on the globe capture the safe-haven
         hypothesis: when they go green during a Middle East risk spike, capital is
         flowing *away* from ME assets *toward* Treasuries and the GBP financial hub.
+
+        #### Tickers and data sources
+
+        Everything is snapshotted into the committed parquet at
+        `dashboard/data/contagion/events.parquet` by the ETL script
+        `scripts/fetch_contagion_data.py` — the page does zero network I/O at
+        runtime, so these are the sources the snapshot is built from.
+
+        | Role | Ticker | Instrument | Source |
+        |---|---|---|---|
+        | **Epicenter — ME risk index** | `EIS`  | iShares MSCI Israel ETF         | yfinance |
+        | | `KSA`  | iShares MSCI Saudi Arabia ETF   | yfinance |
+        | | `UAE`  | iShares MSCI UAE ETF            | yfinance |
+        | **Contagion — destination markets** | `FRED:INDIRLTLT01STM` | India 10Y yield (monthly) | FRED CSV API |
+        | | `TUR`  | iShares MSCI Turkey ETF (proxy — TR yield series discontinued) | yfinance |
+        | | `FRED:IRLTLT01DEM156N` | Germany 10Y yield (monthly) | FRED CSV API |
+        | | `^TNX` | CBOE US 10Y Treasury Yield Index   | yfinance |
+        | **Safe haven** | `^TNX` | CBOE US 10Y Treasury Yield Index | yfinance |
+        | | `GC=F` | COMEX gold front-month future  | yfinance |
+        | **Energy link** | `BZ=F` | ICE Brent front-month future | yfinance |
+        | | `BDRY` | Breakwave Dry Bulk Shipping ETF (ISIN US10965F1012) | yfinance |
+        | **Fear gauge** | `^VIX` | CBOE Volatility Index          | yfinance |
+
+        Correlation window: **7 trading days** for daily tickers, **3 months** for
+        the FRED monthly series (mixing monthly data into a daily 7-day window
+        produces zero-variance stretches → ±inf correlations, which we defensively
+        drop but prefer to avoid at the source).
+
+        #### Why "up" is red for some and green for others
+
+        The RAG colour on each ticker (and the ↑ / ↓ arrow beside it) is
+        polarity-aware — rising ≠ always bad. What we're really asking
+        per ticker is *"is this move stress-on or stress-off for the
+        global risk-on/off regime?"*:
+
+        - 🔴 **Brent Crude (`BZ=F`) up = red.** Rising oil during a Middle East
+          episode is the classic transmission channel — it feeds global
+          inflation, squeezes energy-importing countries' current accounts,
+          and signals a supply-side shock has priced in. Falling Brent back to
+          pre-crisis levels = green (stress-off).
+        - 🔴 **Baltic Dry (`BDRY`) up = red.** The Baltic Dry Index tracks
+          dry-bulk shipping rates; it spikes when vessels are rerouted away
+          from conflict chokepoints (Hormuz, Bab-el-Mandeb) or when freight
+          insurance/fuel costs rise. A rising reading prices in a logistics
+          shock that eventually shows up as CPI.
+        - 🟢 **Gold (`GC=F`) up = green.** Gold has no counterparty risk and
+          tends to rally when equity/credit investors seek a crisis hedge. A
+          rising gold price during a Middle East flashpoint is the safe-haven
+          bid working as expected — the hedge is paying. Falling gold during a
+          crisis episode would mean the hedge failed, which is the troubling
+          signal (hence red).
+        - 🔴 **VIX (`^VIX`) up = red.** The S&P 500 implied-volatility index is
+          the market's fear thermometer — a rising VIX always means risk
+          premium is being repriced upward. Falling VIX = calm returning =
+          green.
+
+        Values inside a ±2% band from the period start are shown in **amber**
+        regardless of direction — the move is small enough to be noise, not
+        signal, so the polarity interpretation doesn't apply yet.
         """
     )
     st.markdown("#### How did they respond in this window?")
