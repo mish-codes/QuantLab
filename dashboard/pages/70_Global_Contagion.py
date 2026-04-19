@@ -876,11 +876,16 @@ with col_right:
     # the "Energy · Safe haven · Fear" grouping is clear per-row
     # instead of being a single header that didn't line up with any
     # specific ticker.
+    # Fifth field is the hover-tooltip text — shows the instrument's
+    # full identifier. Futures (BZ=F, GC=F) and the VIX index don't
+    # have an ISIN (ISINs only exist for equities/ETFs/bonds), so we
+    # show the exchange + yfinance symbol instead. BDRY is an ETF so
+    # it gets a real ISIN.
     _panel_tickers = [
-        ("BZ=F", "Brent Crude",      "Energy",     "up_is_bad"),
-        ("BDRY", "Baltic Dry (ETF)", "Energy",     "up_is_bad"),
-        ("GC=F", "Gold",             "Safe haven", "up_is_good"),
-        ("^VIX", "VIX",              "Fear",       "up_is_bad"),
+        ("BZ=F", "Brent Crude",      "Energy",     "up_is_bad",  "ICE Brent front-month future · yfinance BZ=F"),
+        ("BDRY", "Baltic Dry (ETF)", "Energy",     "up_is_bad",  "Breakwave Dry Bulk Shipping ETF · ISIN US10965F1012"),
+        ("GC=F", "Gold",             "Safe haven", "up_is_good", "COMEX gold front-month future · yfinance GC=F"),
+        ("^VIX", "VIX",              "Fear",       "up_is_bad",  "CBOE Volatility Index · ^VIX"),
     ]
 
     def _rag_ticker(pct: float, polarity: str) -> str:
@@ -910,7 +915,7 @@ with col_right:
     # series (visible in DevTools as "WARN Infinite extent for field
     # date" coming from the vega-lite sparkline embedder).
     _sel_ts = pd.Timestamp(selected_date)
-    for ticker, label, category, polarity in _panel_tickers:
+    for ticker, label, category, polarity, tooltip in _panel_tickers:
         series = (
             events[events["ticker"] == ticker]
             .set_index("date")["close"]
@@ -944,8 +949,11 @@ with col_right:
         # trailing pct span when the line started with **bold**. The
         # ql-ticker-value class gets a brief opacity pulse each re-render
         # so the values visibly flash when the slider advances.
+        # title= on the row shows the instrument's identifier + data
+        # source as a native browser tooltip on hover — ISIN for the
+        # ETF, exchange + yfinance symbol for futures and indices.
         st.markdown(
-            f"<div class='ql-ticker-row'>"
+            f"<div class='ql-ticker-row' title=\"{tooltip}\">"
             f"<strong>{label}</strong> "
             f"<span class='ql-ticker-chip'>{category}</span> &nbsp;"
             f"<span class='ql-ticker-value' "
@@ -1068,6 +1076,65 @@ with st.expander(
         The 🟢 arcs to **New York** and **London** on the globe capture the safe-haven
         hypothesis: when they go green during a Middle East risk spike, capital is
         flowing *away* from ME assets *toward* Treasuries and the GBP financial hub.
+
+        #### Tickers and data sources
+
+        Everything is snapshotted into the committed parquet at
+        `dashboard/data/contagion/events.parquet` by the ETL script
+        `scripts/fetch_contagion_data.py` — the page does zero network I/O at
+        runtime, so these are the sources the snapshot is built from.
+
+        | Role | Ticker | Instrument | Source |
+        |---|---|---|---|
+        | **Epicenter — ME risk index** | `EIS`  | iShares MSCI Israel ETF         | yfinance |
+        | | `KSA`  | iShares MSCI Saudi Arabia ETF   | yfinance |
+        | | `UAE`  | iShares MSCI UAE ETF            | yfinance |
+        | **Contagion — destination markets** | `FRED:INDIRLTLT01STM` | India 10Y yield (monthly) | FRED CSV API |
+        | | `TUR`  | iShares MSCI Turkey ETF (proxy — TR yield series discontinued) | yfinance |
+        | | `FRED:IRLTLT01DEM156N` | Germany 10Y yield (monthly) | FRED CSV API |
+        | | `^TNX` | CBOE US 10Y Treasury Yield Index   | yfinance |
+        | **Safe haven** | `^TNX` | CBOE US 10Y Treasury Yield Index | yfinance |
+        | | `GC=F` | COMEX gold front-month future  | yfinance |
+        | **Energy link** | `BZ=F` | ICE Brent front-month future | yfinance |
+        | | `BDRY` | Breakwave Dry Bulk Shipping ETF (ISIN US10965F1012) | yfinance |
+        | **Fear gauge** | `^VIX` | CBOE Volatility Index          | yfinance |
+
+        Correlation window: **7 trading days** for daily tickers, **3 months** for
+        the FRED monthly series (mixing monthly data into a daily 7-day window
+        produces zero-variance stretches → ±inf correlations, which we defensively
+        drop but prefer to avoid at the source).
+
+        #### Why "up" is red for some and green for others
+
+        The RAG colour on each ticker (and the ↑ / ↓ arrow beside it) is
+        polarity-aware — rising ≠ always bad. What we're really asking
+        per ticker is *"is this move stress-on or stress-off for the
+        global risk-on/off regime?"*:
+
+        - 🔴 **Brent Crude (`BZ=F`) up = red.** Rising oil during a Middle East
+          episode is the classic transmission channel — it feeds global
+          inflation, squeezes energy-importing countries' current accounts,
+          and signals a supply-side shock has priced in. Falling Brent back to
+          pre-crisis levels = green (stress-off).
+        - 🔴 **Baltic Dry (`BDRY`) up = red.** The Baltic Dry Index tracks
+          dry-bulk shipping rates; it spikes when vessels are rerouted away
+          from conflict chokepoints (Hormuz, Bab-el-Mandeb) or when freight
+          insurance/fuel costs rise. A rising reading prices in a logistics
+          shock that eventually shows up as CPI.
+        - 🟢 **Gold (`GC=F`) up = green.** Gold has no counterparty risk and
+          tends to rally when equity/credit investors seek a crisis hedge. A
+          rising gold price during a Middle East flashpoint is the safe-haven
+          bid working as expected — the hedge is paying. Falling gold during a
+          crisis episode would mean the hedge failed, which is the troubling
+          signal (hence red).
+        - 🔴 **VIX (`^VIX`) up = red.** The S&P 500 implied-volatility index is
+          the market's fear thermometer — a rising VIX always means risk
+          premium is being repriced upward. Falling VIX = calm returning =
+          green.
+
+        Values inside a ±2% band from the period start are shown in **amber**
+        regardless of direction — the move is small enough to be noise, not
+        signal, so the polarity interpretation doesn't apply yet.
         """
     )
     st.markdown("#### How did they respond in this window?")
