@@ -24,9 +24,9 @@ def correlation_to_color(corr: float) -> tuple[int, int, int, int]:
                                        dark night-lights globe.
     """
     c = max(-1.0, min(1.0, float(corr)))
-    green = (20, 160, 40)    # #14a028
+    green = (50, 140, 80)    # muted sage
     slate = (71, 85, 105)    # #475569
-    red = (200, 30, 30)      # #c81e1e
+    red = (180, 70, 70)      # muted rose
     if c >= 0:
         t = c
         r = int(slate[0] + t * (red[0] - slate[0]))
@@ -42,7 +42,7 @@ def correlation_to_color(corr: float) -> tuple[int, int, int, int]:
     # which markets are actually "lit up" without having to read the
     # correlation table. Range 110 (weak) → 240 (strong).
     strength = abs(c)
-    alpha = int(110 + strength * 130)
+    alpha = int(70 + strength * 80)   # 70 (weak) → 150 (strong) — more transparent
     return (r, g, b, alpha)
 
 

@@ -557,12 +557,12 @@ night_lights_layer = pdk.Layer(
 # outlined.
 def _corr_to_destination_fill(v: float) -> list[int]:
     if v >= 0.5:
-        return [200, 30, 30, 140]      # arc red   #c81e1e, translucent
+        return [180, 70, 70, 80]       # muted rose, more transparent
     if v <= -0.5:
-        return [20, 160, 40, 140]      # arc green #14a028, translucent
+        return [50, 140, 80, 80]       # muted sage, more transparent
     if abs(v) >= 0.2:
-        return [217, 119, 6, 120]      # amber     #d97706, more subtle
-    return [71, 85, 105, 80]           # slate     #475569, barely-there
+        return [200, 140, 40, 60]      # muted amber
+    return [71, 85, 105, 50]           # slate, barely-there
 
 
 _dest_features_enriched: list[dict] = []
@@ -605,8 +605,8 @@ epicenter_layer = pdk.Layer(
     data=_epicenter_geo,
     stroked=True,
     filled=True,
-    get_fill_color=[200, 30, 30, 150],
-    get_line_color=[255, 180, 180, 240],
+    get_fill_color=[180, 70, 70, 90],
+    get_line_color=[255, 160, 160, 200],
     line_width_min_pixels=1.6,
     pickable=False,
 )
