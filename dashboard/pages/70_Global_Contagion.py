@@ -667,6 +667,7 @@ deck = pdk.Deck(
     # underscore pydeck silently falls back to MapView (Mercator).
     views=[pdk.View(type="_GlobeView", controller=True)],
     map_provider=None,
+    map_style=None,   # removes the default "dark" mapStyle from JSON — that's what renders the teal ocean
     tooltip={"text": "{dest_label}\nCorrelation: {correlation}"},
 )
 
@@ -693,7 +694,7 @@ with col_globe:
     # through both the space outside the sphere and the ocean inside it.
     _deck_html = _deck_html.replace(
         "</head>",
-        "<style>body,canvas{background:#fff!important;}</style></head>",
+        "<style>body,#deck-container{background:#fff!important;}</style></head>",
     )
     components.html(_deck_html, height=980, scrolling=False)
 
