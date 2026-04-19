@@ -30,29 +30,54 @@ accessors. Without this, deck.gl keeps stale colours because the
 """
 from __future__ import annotations
 
+import base64
+from functools import lru_cache
 from pathlib import Path
 
 import streamlit.components.v1 as components
 
 _FRONTEND_DIR = Path(__file__).resolve().parent / "frontend"
+_INDEX_HTML = _FRONTEND_DIR / "index.html"
+_NIGHT_LIGHTS = _FRONTEND_DIR / "world_night.jpg"
 
-# KNOWN ISSUE (2026-04): Streamlit Cloud would not load this component
-# for our app layout — both ``path=`` and ``url=<jsDelivr>`` produced
-# the "trouble loading the component" timeout banner. The page has
-# reverted to ``components.html(deck.to_html(...))`` in the meantime
-# and does NOT currently call ``contagion_globe()``. The code below is
-# kept as a starting point for a future debug session once we can
-# reproduce locally against a Cloud-like sandbox.
-#
-# Hypothesis for next debug pass: the iframe loads, but our immediate
-# ``streamlit:componentReady`` postMessage may be blocked because the
-# parent is still registering listeners. Try streamlit-component-lib's
-# official ready/setReady helpers + a small MutationObserver that
-# re-fires ready whenever the iframe's connection to the parent is
-# re-established after Streamlit's own remount cycle.
+
+@lru_cache(maxsize=1)
+def _build_data_url() -> str:
+    """Build a self-contained data: URL for the component frontend.
+
+    Streamlit Cloud kept failing to load our component via both
+    ``path=`` (Cloud serves the files) and ``url=<external CDN>``:
+    iframes timed out with "trouble loading the component" before any
+    postMessage could fire. The data: URL approach sidesteps Cloud's
+    component-serving layer entirely — the iframe's ``src`` is the
+    raw HTML inline, no external fetch. Image references inside the
+    HTML get replaced with an inlined base64 data URL at build time
+    so the iframe is fully self-contained.
+
+    Size: roughly 1.1 MB of HTML + 1 MB of base64 image = ~1.4 MB
+    data: URL. Well under Chromium's data-URL cap. Cached with
+    lru_cache so the encoding happens once per Python process.
+    """
+    raw_html = _INDEX_HTML.read_text(encoding="utf-8")
+    img_b64 = base64.b64encode(_NIGHT_LIGHTS.read_bytes()).decode("ascii")
+    inline_img = f"data:image/jpeg;base64,{img_b64}"
+    # Frontend defaults to './world_night.jpg'; replace that with the
+    # inline data URL so the iframe doesn't try to resolve a relative
+    # path (which has no base URL under a data: src).
+    html_with_inline_image = raw_html.replace("./world_night.jpg", inline_img)
+    encoded = base64.b64encode(html_with_inline_image.encode("utf-8")).decode("ascii")
+    return f"data:text/html;base64,{encoded}"
+
+
+# Register the component with a data: URL. Streamlit sets the iframe's
+# src to this URL; the browser decodes and renders inline, no network
+# request out to Streamlit Cloud's component endpoint or an external
+# CDN. The component protocol (streamlit:componentReady +
+# streamlit:render postMessages) works the same — postMessage with
+# '*' target is cross-origin-safe, which data: URLs count as.
 _component_func = components.declare_component(
     "contagion_globe",
-    path=str(_FRONTEND_DIR),
+    url=_build_data_url(),
 )
 
 
