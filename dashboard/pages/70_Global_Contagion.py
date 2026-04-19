@@ -35,72 +35,11 @@ render_sidebar()
 st.markdown(
     """
     <style>
-    /* ───────────────────────── night-lights page theme ─────────────────────
-       The whole page sits on the same deep-navy as the globe's clearColor
-       so the viz doesn't feel pasted onto a white card. Text switches to
-       a light neutral (#e5e7eb). RAG colours (#c81e1e / #14a028 / #d97706
-       / #475569) are the *only* saturated hues on the page — they always
-       mean signal. All four palette anchors appear identically on the
-       arcs, the destination-country fills, the correlation cells, and
-       the ticker chips so the colour vocabulary stays in sync across
-       every widget. */
-    [data-testid="stMain"] {
-        background: radial-gradient(ellipse at top, #0b1226 0%, #050810 70%);
-        color: #e5e7eb;
-    }
-    [data-testid="stMain"] h1,
-    [data-testid="stMain"] h2,
-    [data-testid="stMain"] h3,
-    [data-testid="stMain"] p,
-    [data-testid="stMain"] strong,
-    [data-testid="stMain"] li,
-    [data-testid="stMain"] label,
-    [data-testid="stMain"] .stMarkdown,
-    [data-testid="stMain"] .stMarkdown * {
-        color: #e5e7eb !important;
-    }
-    [data-testid="stMain"] [data-testid="stCaptionContainer"],
-    [data-testid="stMain"] [data-testid="stCaptionContainer"] * {
-        color: #94a3b8 !important;
-    }
-    [data-testid="stMain"] .stMarkdown a { color: #93c5fd !important; }
-    [data-testid="stMain"] code,
-    [data-testid="stMain"] .stMarkdown code {
-        background: rgba(148,163,184,0.12) !important;
-        color: #cbd5e1 !important;
-        border-radius: 3px;
-        padding: 0 4px;
-    }
-    /* Expanders (About + Methodology) as darker cards. */
-    [data-testid="stMain"] [data-testid="stExpander"] {
-        background: rgba(255,255,255,0.03) !important;
-        border: 1px solid rgba(255,255,255,0.08) !important;
-        border-radius: 8px;
-    }
-    [data-testid="stMain"] [data-testid="stExpander"] summary {
-        color: #e5e7eb !important;
-    }
-    /* Tables inside expanders & hand-rolled correlation table read on dark. */
-    [data-testid="stMain"] table {
-        color: #e5e7eb !important;
-    }
-    [data-testid="stMain"] table th {
-        color: #94a3b8 !important;
-        border-bottom-color: rgba(148,163,184,0.25) !important;
-    }
-    /* Radio labels + slider value badge */
-    [data-testid="stMain"] [role="radiogroup"] label {
-        color: #e5e7eb !important;
-    }
-    /* Play button on dark card */
-    [data-testid="stMain"] button[kind="secondary"] {
-        background: rgba(255,255,255,0.06) !important;
-        color: #e5e7eb !important;
-        border-color: rgba(255,255,255,0.15) !important;
-    }
-    [data-testid="stMain"] button[kind="secondary"]:hover {
-        background: rgba(255,255,255,0.12) !important;
-    }
+    /* Page stays on the default light Streamlit theme — only the globe
+       iframe is dark (via its own clearColor). Keeping the page light
+       means the correlation table / ticker chips / expanders all use
+       default text + chrome and feel like the rest of the dashboard;
+       only the 3D visualisation is "in space". */
 
     @keyframes ql-contagion-fade-in {
         from { opacity: 0; transform: translateY(10px); }
@@ -160,8 +99,8 @@ st.markdown(
     }
 
     /* Category chip beside each ticker label — "Energy" / "Safe haven"
-       / "Fear". Soft translucent pill: labels the row without
-       competing with the RAG-coloured value/arrow. */
+       / "Fear". Soft light pill: labels the row without competing
+       with the RAG-coloured value/arrow. */
     .ql-ticker-chip {
         display: inline-block;
         font-size: 0.68em;
@@ -170,8 +109,8 @@ st.markdown(
         padding: 1px 7px;
         margin-left: 4px;
         border-radius: 8px;
-        background: rgba(148,163,184,0.15);
-        color: #94a3b8;
+        background: #f1f5f9;
+        color: #64748b;
         vertical-align: 2px;
     }
 
@@ -436,6 +375,17 @@ if _period_events and dates:
 
 selected_date = dates[st.session_state.contagion_date_idx]
 st.caption(f"Showing snapshot at **{selected_date}**")
+
+# Big month-year badge so the current date is always obvious at a
+# glance — helps the eye anchor to "where in the conflict am I?"
+# while the timeline slider is a compact frame index.
+_month_year = selected_date.strftime("%B %Y") if hasattr(selected_date, "strftime") else str(selected_date)
+st.markdown(
+    f'<div style="font-family:Georgia, serif;font-size:2.2rem;'
+    f'font-weight:600;letter-spacing:-0.01em;margin:-6px 0 12px;'
+    f'color:#1f2937">{_month_year}</div>',
+    unsafe_allow_html=True,
+)
 
 # Auto-advance while playing — overrides auto-rotate.
 # Cadence tuned for smooth perceived motion without outrunning
@@ -765,18 +715,42 @@ deck = pdk.Deck(
 col_globe, col_right = st.columns([5, 2])
 
 with col_globe:
-    # st.pydeck_chart does NOT forward the views= config to its internal
-    # deck.gl renderer — it always uses MapView, silently ignoring
-    # _GlobeView. Rendering via deck.to_html() + components.html gives
-    # us deck.gl's native JS renderer which honours GlobeView correctly.
-    _deck_html = deck.to_html(as_string=True, notebook_display=False)
-    # pydeck 0.9.1 incorrectly tags the BitmapLayer `image` prop with
-    # the "@@=" accessor-expression prefix. Strip it so deck.gl sees a
-    # plain string URL (or data: URL) instead of trying to evaluate an
-    # expression that starts with "data" and fails at the first colon.
-    import re as _re
-    _deck_html = _re.sub(r'"image"\s*:\s*"@@=', '"image": "', _deck_html)
-    components.html(_deck_html, height=980, scrolling=False)
+    # Globe-freeze-during-Play:
+    # Generating the deck HTML on every Play rerun (~5 Hz) sends ~50 KB
+    # over the websocket and causes the iframe to reload deck.gl end-
+    # to-end — user sees a jagged flicker. We cache the HTML in session
+    # state and skip regeneration during playback: identical string on
+    # every frame means Streamlit's reconciler leaves the iframe alone.
+    # The globe catches up immediately when:
+    #   * the user toggles period (cache key includes period_key)
+    #   * Play ends / user drags slider (playing flips False → rebuild)
+    #   * auto-rotate is on (bearing changes → not-playing branch runs
+    #     → cache refreshed each tick)
+    # Trade-off: during Play the arc colours + destination fills stay at
+    # the last-rendered date while the right-hand panels keep ticking
+    # live. Arc-by-arc smooth updates without iframe reload would need
+    # a bidirectional custom component (postMessage into a persistent
+    # deck.gl instance) — bigger lift, deferred.
+    _should_rebuild_globe = (
+        not st.session_state.contagion_playing
+        or "contagion_globe_html" not in st.session_state
+        or st.session_state.get("contagion_globe_cache_period") != period_key
+    )
+    if _should_rebuild_globe:
+        import re as _re
+        _fresh_html = deck.to_html(as_string=True, notebook_display=False)
+        # pydeck 0.9.1 incorrectly tags the BitmapLayer `image` prop
+        # with the "@@=" accessor-expression prefix. Strip it so deck.gl
+        # sees a plain URL string instead of trying to evaluate an
+        # expression starting with "data" (fails at the first colon).
+        _fresh_html = _re.sub(r'"image"\s*:\s*"@@=', '"image": "', _fresh_html)
+        st.session_state.contagion_globe_html = _fresh_html
+        st.session_state.contagion_globe_cache_period = period_key
+    components.html(
+        st.session_state.contagion_globe_html,
+        height=980,
+        scrolling=False,
+    )
 
 with col_right:
     st.caption("7-day corr vs ME index")
@@ -792,22 +766,19 @@ with col_right:
     # st.dataframe drops the cell background on some Streamlit Cloud
     # pandas/streamlit combos — the hand-rolled version is guaranteed
     # to render since it's just markdown HTML.
-    # Softer tones than the arc ramp — the arcs on the globe are
-    # translucent/glowy on a dark 3D globe so the saturated hex reads as
-    # light, but a solid-fill table cell at #c81e1e hurts the eye next
-    # to the dark page. rgba with alpha 0.82 over the navy page gives
-    # the same colour identity at a comfortable intensity. Text is the
-    # tint-100 of each family so it stays legible.
+    # Light-theme RAG palette: tint-100 backgrounds with tint-800 text.
+    # Clean on the default white page and still clearly signals the same
+    # red/green/amber/slate categories as the arcs on the globe.
     def _rag_corr_style(v: float) -> str:
         if pd.isna(v):
-            return "background:rgba(71,85,105,0.6);color:#cbd5e1;"
+            return "background:#f1f5f9;color:#475569;"
         if v >= 0.5:
-            return "background:rgba(185,28,28,0.82);color:#fee2e2;"
+            return "background:#fee2e2;color:#991b1b;"
         if v <= -0.5:
-            return "background:rgba(21,128,61,0.82);color:#dcfce7;"
+            return "background:#dcfce7;color:#166534;"
         if abs(v) >= 0.2:
-            return "background:rgba(180,83,9,0.80);color:#fef3c7;"
-        return "background:rgba(71,85,105,0.55);color:#cbd5e1;"
+            return "background:#fef3c7;color:#92400e;"
+        return "background:#f1f5f9;color:#475569;"
 
     _rows_html = "".join(
         f"<tr class='ql-corr-row'>"
@@ -882,9 +853,12 @@ def _ticker_sparkline_svg(
     )
 
 
-    # Tickers live in the SAME right-hand column as the correlation
-    # table now, stacked below it with a thin separator so the eye
-    # reads "correlations first, then the underlying stress signals."
+# Tickers live in the SAME right-hand column as the correlation table,
+# stacked below it with a thin separator so the eye reads "correlations
+# first, then the underlying stress signals."  `with col_right:` is
+# reopened here — Streamlit concatenates content from repeat `with`
+# calls on the same column.
+with col_right:
     st.markdown(
         "<div style='height:1px;background:rgba(148,163,184,0.2);"
         "margin:12px 0 10px'></div>",
