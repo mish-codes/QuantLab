@@ -506,9 +506,11 @@ ocean_layer = pdk.Layer(
             "type": "Feature",
             "geometry": {
                 "type": "Polygon",
+                # GeoJSON exterior ring must be CCW (right-hand rule).
+                # SW→NW→NE→SE→SW is CCW; the reverse (CW) renders as a hole.
                 "coordinates": [[
-                    [-179.9, -89.9], [179.9, -89.9],
-                    [179.9, 89.9], [-179.9, 89.9], [-179.9, -89.9],
+                    [-179.9, -89.9], [-179.9, 89.9],
+                    [179.9, 89.9], [179.9, -89.9], [-179.9, -89.9],
                 ]]
             },
             "properties": {}
@@ -721,7 +723,7 @@ with col_globe:
     # canvas teal that bleeds through the transparent deck.gl canvas.
     _deck_html = _deck_html.replace(
         "const jsonInput = {",
-        'const jsonInput = {\n  "mapStyle": null,',
+        'const jsonInput = {\n  "mapStyle": null,\n  "clearColor": [1, 1, 1, 1],',
         1,
     )
     _whitebg = "<style>html,body,#deck-container{background:#fff!important;}</style>"
