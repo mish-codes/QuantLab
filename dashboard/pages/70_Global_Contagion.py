@@ -181,29 +181,6 @@ st.markdown(
         opacity: 1;
     }
 
-    /* The globe iframe reinits on every Play rerun (components.html creates
-       a new iframe per render). During the brief unmount-remount gap the
-       wrapper is visible — paint it black so the transition is dark→globe
-       rather than white→globe. The fade-in starts from opacity 0 so the
-       brief flicker reads as a smooth dissolve. */
-    [data-testid="stMain"] [data-testid="stIFrame"],
-    [data-testid="stMain"] .stIFrame,
-    [data-testid="stMain"] .element-container:has([data-testid="stIFrame"]) {
-        background: #000 !important;
-    }
-    [data-testid="stMain"] [data-testid="stIFrame"] iframe,
-    [data-testid="stMain"] .stIFrame iframe {
-        background: #000 !important;
-    }
-    @keyframes ql-globe-fade-in {
-        from { opacity: 0; }
-        to   { opacity: 1; }
-    }
-    [data-testid="stMain"] iframe[title="streamlit_app"],
-    [data-testid="stMain"] .stIFrame iframe {
-        animation: ql-globe-fade-in 0.35s ease-out;
-        will-change: opacity;
-    }
     </style>
     """,
     unsafe_allow_html=True,
