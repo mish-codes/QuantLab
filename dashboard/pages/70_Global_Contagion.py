@@ -717,10 +717,15 @@ with col_globe:
     # flat Mercator, losing the 3D sphere entirely. No BitmapLayer means the
     # pydeck 0.9.1 "@@=" image-prop bug no longer applies here.
     _deck_html = deck.to_html(as_string=True, notebook_display=False)
-    # GlobeView renders teal sky as a draw call — clearColor patching is
-    # ineffective. Instead, overlay a white div with a radial-gradient mask
-    # that is transparent over the globe sphere and opaque outside it,
-    # sitting above the WebGL canvas via z-index.
+    # The teal sky is deck.gl GlobeView's atmosphere draw call — not clearColor.
+    # Disable it via the "atmosphere" prop on the GlobeView JSON object, which
+    # deck.gl 9.x supports to suppress the sky/haze geometry pass.
+    _deck_html = _deck_html.replace(
+        '"@@type": "_GlobeView"',
+        '"@@type": "_GlobeView", "atmosphere": false',
+        1,
+    )
+    # Also apply white background + outer-sphere mask as belt-and-braces.
     _css = (
         "<style>"
         "html,body{background:#fff!important;}"
@@ -735,8 +740,6 @@ with col_globe:
     )
     _mask_div = '<div id="globe-sky-mask"></div>'
     _deck_html = _deck_html.replace("<head>", "<head>" + _css, 1)
-    # Inject mask inside #deck-container so position:absolute inset:0 is
-    # relative to the container (which deck.gl also appends its canvas into).
     _deck_html = _deck_html.replace(
         '<div id="deck-container"></div>',
         f'<div id="deck-container">{_mask_div}</div>',
