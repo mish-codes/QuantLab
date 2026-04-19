@@ -494,13 +494,26 @@ _epicenter_geo, _destination_geo, _rest_geo = _split_countries_by_role()
 # with cyan (the border width is not constant in 3D projection). Cyan
 # accents are reserved for the five destination countries where they
 # read as highlights rather than noise.
-# Solid white fill covering the full sphere — renders below all other layers
-# to replace the teal Mapbox GL ocean that bleeds through the transparent
-# deck.gl canvas.  [-179.9/-89.9] avoids antimeridian-seam artefacts.
+# White GeoJsonLayer covering the full sphere — renders below all other
+# layers to occlude the Mapbox GL default ocean.  Uses GeoJsonLayer (not
+# PolygonLayer) because GlobeView supports GeoJsonLayer reliably.
+# [-179.9/-89.9] avoids antimeridian-seam artefacts.
 ocean_layer = pdk.Layer(
-    "PolygonLayer",
-    data=[{"polygon": [[-179.9, -89.9], [179.9, -89.9], [179.9, 89.9], [-179.9, 89.9]]}],
-    get_polygon="polygon",
+    "GeoJsonLayer",
+    data={
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[
+                    [-179.9, -89.9], [179.9, -89.9],
+                    [179.9, 89.9], [-179.9, 89.9], [-179.9, -89.9],
+                ]]
+            },
+            "properties": {}
+        }]
+    },
     get_fill_color=[255, 255, 255, 255],
     filled=True,
     stroked=False,
@@ -702,16 +715,16 @@ with col_globe:
     # flat Mercator, losing the 3D sphere entirely. No BitmapLayer means the
     # pydeck 0.9.1 "@@=" image-prop bug no longer applies here.
     _deck_html = deck.to_html(as_string=True, notebook_display=False)
-    # Outside the sphere the deck.gl canvas is transparent — Mapbox GL renders
-    # teal underneath.  White body background + hidden Mapbox canvas makes the
-    # transparent areas outside the sphere appear white.
-    _whitebg = (
-        "<style>html,body,#deck-container{background:#fff!important;}</style>"
-        "<script>setTimeout(function(){"
-        "var cs=document.querySelectorAll('canvas');"
-        "if(cs.length>1){cs[0].style.visibility='hidden';}"
-        "},800);</script>"
+    # Explicitly null out mapStyle so @deck.gl/jupyter-widget doesn't fall back
+    # to its built-in default (dark Mapbox style).  Also inject white CSS so
+    # the area outside the sphere shows the body background, not the Mapbox GL
+    # canvas teal that bleeds through the transparent deck.gl canvas.
+    _deck_html = _deck_html.replace(
+        "const jsonInput = {",
+        'const jsonInput = {\n  "mapStyle": null,',
+        1,
     )
+    _whitebg = "<style>html,body,#deck-container{background:#fff!important;}</style>"
     _deck_html = _deck_html.replace("<head>", "<head>" + _whitebg, 1)
     components.html(_deck_html, height=980, scrolling=False)
 
