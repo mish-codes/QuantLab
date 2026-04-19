@@ -688,23 +688,21 @@ with col_globe:
     # flat Mercator, losing the 3D sphere entirely. No BitmapLayer means the
     # pydeck 0.9.1 "@@=" image-prop bug no longer applies here.
     _deck_html = deck.to_html(as_string=True, notebook_display=False)
-    # Patch WebGL clearColor at the instance level before deck.gl/mapbox-gl
-    # initialise — intercepts every canvas.getContext() call and wraps
-    # clearColor to always force white, overriding the teal that Mapbox GL
-    # sets as its default ocean background colour.
+    # Patch WebGLRenderingContext / WebGL2RenderingContext prototypes directly
+    # so every gl.clearColor() call anywhere on the page clears to white.
+    # Mapbox GL sets its default ocean to teal via clearColor — this overrides it.
     _whitebg = (
         "<script>(function(){"
-        "var _orig=HTMLCanvasElement.prototype.getContext;"
-        "HTMLCanvasElement.prototype.getContext=function(t,a){"
-        "var ctx=_orig.call(this,t,a);"
-        "if(ctx&&(t==='webgl'||t==='webgl2'||t==='experimental-webgl')){"
-        "ctx.clearColor=function(r,g,b,a){"
-        "Object.getPrototypeOf(ctx).clearColor.call(ctx,1,1,1,1);"
-        "};"
-        "}return ctx;};"
+        "function _patch(P){"
+        "if(!P)return;"
+        "var _o=P.clearColor;"
+        "P.clearColor=function(){_o.call(this,1,1,1,1);};"
+        "}"
+        "_patch(window.WebGLRenderingContext&&WebGLRenderingContext.prototype);"
+        "_patch(window.WebGL2RenderingContext&&WebGL2RenderingContext.prototype);"
         "})();</script>"
     )
-    _deck_html = _deck_html.replace("<body>", "<body>" + _whitebg, 1)
+    _deck_html = _deck_html.replace("<head>", "<head>" + _whitebg, 1)
     components.html(_deck_html, height=980, scrolling=False)
 
 with col_right:
