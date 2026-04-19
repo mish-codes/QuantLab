@@ -6,12 +6,14 @@ from lib.contagion import globe
 
 def test_correlation_to_color_red_at_plus_one():
     r, g, b, a = globe.correlation_to_color(1.0)
-    assert r >= 180 and g < 50 and b < 50
+    # Muted rose anchor: r=180, g=70, b=70
+    assert r >= 170 and g < 90 and b < 90
 
 
 def test_correlation_to_color_green_at_minus_one():
     r, g, b, a = globe.correlation_to_color(-1.0)
-    assert g >= 100 and r < 50 and b < 50
+    # Muted sage anchor: g=140, r=50, b=80
+    assert g >= 120 and r < 70 and b < 100
 
 
 def test_correlation_to_color_gray_at_zero():
