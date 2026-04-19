@@ -30,16 +30,41 @@ accessors. Without this, deck.gl keeps stale colours because the
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import streamlit.components.v1 as components
 
 _FRONTEND_DIR = Path(__file__).resolve().parent / "frontend"
 
-_component_func = components.declare_component(
-    "contagion_globe",
-    path=str(_FRONTEND_DIR),
+# Streamlit Cloud was returning the "trouble loading the component"
+# banner with ``path=`` — it wasn't serving our bundled index.html /
+# world_night.jpg reliably for the app running out of a subdirectory.
+# Workaround: host the frontend via jsDelivr (which already mirrors
+# every file in the public repo) and use ``url=``. Streamlit then just
+# points the iframe at the jsDelivr URL; the component protocol
+# (``streamlit:componentReady`` + ``streamlit:render`` postMessages)
+# works identically regardless of host. Image references inside
+# index.html stay relative (``./world_night.jpg``) and resolve against
+# the jsDelivr host, which serves the JPG from the same directory.
+#
+# Override via QL_CONTAGION_GLOBE_URL for dev (e.g., localhost dev
+# server) or QL_CONTAGION_GLOBE_USE_PATH=1 to force the old path=
+# behaviour against a local Streamlit.
+_JSDELIVR_URL = (
+    "https://cdn.jsdelivr.net/gh/mish-codes/QuantLab@master/"
+    "dashboard/lib/components/contagion_globe/frontend/index.html"
 )
+
+_override_url = os.environ.get("QL_CONTAGION_GLOBE_URL")
+_use_path = os.environ.get("QL_CONTAGION_GLOBE_USE_PATH") == "1"
+
+if _override_url:
+    _component_func = components.declare_component("contagion_globe", url=_override_url)
+elif _use_path:
+    _component_func = components.declare_component("contagion_globe", path=str(_FRONTEND_DIR))
+else:
+    _component_func = components.declare_component("contagion_globe", url=_JSDELIVR_URL)
 
 
 def contagion_globe(
