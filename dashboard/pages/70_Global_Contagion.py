@@ -1112,6 +1112,14 @@ with st.expander(
         Values inside a ±2% band from the period start are shown in **amber**
         regardless of direction — the move is small enough to be noise, not
         signal, so the polarity interpretation doesn't apply yet.
+
+        #### A note on the globe animation
+
+        The globe refreshes on every Play step because Streamlit recreates the
+        entire WebGL iframe each rerun — a platform-level constraint of
+        `components.html()`. You may see a brief flicker between frames; this
+        is expected and not a data issue. The arc colours and correlation table
+        are always in sync with the selected date.
         """
     )
     st.markdown("#### How did they respond in this window?")
