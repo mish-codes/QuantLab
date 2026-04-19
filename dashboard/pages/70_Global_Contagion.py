@@ -16,6 +16,7 @@ import streamlit.components.v1 as components
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 
 from contagion import constants, loader  # noqa: E402
+from globe import style as _globe_style   # noqa: E402
 from nav import render_sidebar  # noqa: E402
 from page_header import render_page_header  # noqa: E402
 
@@ -486,60 +487,19 @@ def _split_countries_by_role() -> tuple[dict, dict, dict]:
 
 _epicenter_geo, _destination_geo, _rest_geo = _split_countries_by_role()
 
-# Earth surface: NASA Black Marble night-lights via BitmapLayer, with
-# two polygon layers drawn over it to highlight the epicenter (red) and
-# the five destination countries (amber).
-#
-# pydeck 0.9.1 has a bug where the `image` string prop on BitmapLayer is
-# incorrectly prefixed with "@@=" in the serialised JSON (treated as an
-# accessor expression). deck.gl's JSON converter then tries to parse the
-# data: URL as an expression and fails at the first colon:
-#   Error: Unexpected ":" at character 4
-# We work around it by regex-stripping the prefix from the HTML string
-# after `deck.to_html(...)` — see the `_deck_html` handling below.
-#
-# Night-lights JPG lives in the repo and is served via jsDelivr's
-# GitHub CDN so the browser caches it once and reuses it across every
-# Play-loop rerun. Previously we inlined the 779 KB image as a base64
-# data: URL, which meant each Streamlit rerun sent ~1 MB of HTML over
-# the websocket and forced the iframe to re-parse the data URL — the
-# globe visibly blinked every frame during playback. jsDelivr serves
-# with CORS + long cache headers so WebGL can load the texture and
-# subsequent iframe reloads skip the network entirely.
-#
-# If jsDelivr is unreachable for any reason, fall back to the bundled
-# base64 (keeps the page functional offline / on forks).
-import base64 as _b64
-
-_NIGHT_LIGHTS_CDN_URL = (
-    "https://cdn.jsdelivr.net/gh/mish-codes/QuantLab@master/"
-    "dashboard/assets/images/world_night.jpg"
-)
-_NIGHT_LIGHTS_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "assets" / "images" / "world_night.jpg"
-)
-
-
-@st.cache_data(show_spinner=False)
-def _night_lights_data_url() -> str:
-    """Fallback: bundled image as a base64 data URL.
-
-    Kept for local development and for forks where the jsDelivr URL is
-    wrong. Not used on the deployed app — jsDelivr is preferred because
-    it's browser-cacheable, which is what makes the Play loop stop
-    blinking the globe on every frame.
-    """
-    with _NIGHT_LIGHTS_PATH.open("rb") as f:
-        encoded = _b64.b64encode(f.read()).decode("ascii")
-    return f"data:image/jpeg;base64,{encoded}"
-
-
-night_lights_layer = pdk.Layer(
-    "BitmapLayer",
-    image=_NIGHT_LIGHTS_CDN_URL,
-    bounds=[-180, -90, 180, 90],
-    opacity=1.0,
+# Blue tech-globe basemap — all countries not in the epicenter or
+# destination groups get the neutral navy fill with glowing cyan borders.
+# This replaces the NASA night-lights BitmapLayer so the aesthetic shifts
+# from a photorealistic dark-earth to a digital-globe network style.
+rest_layer = pdk.Layer(
+    "GeoJsonLayer",
+    data=_rest_geo,
+    stroked=True,
+    filled=True,
+    get_fill_color=_globe_style.CONTINENT_FILL,
+    get_line_color=_globe_style.CONTINENT_STROKE,
+    line_width_min_pixels=_globe_style.CONTINENT_LINE_WIDTH,
+    pickable=False,
 )
 
 
@@ -592,14 +552,13 @@ destination_layer = pdk.Layer(
     # Bright edge glow — the soft fill plus this crisp stroke gives the
     # "neon outline on a dark map" look. Stroke alpha kept high so the
     # polygon edges pop even when the fill itself is near-transparent.
-    get_line_color=[255, 255, 255, 235],
+    get_line_color=_globe_style.CONTINENT_STROKE,
     line_width_min_pixels=1.4,
     pickable=False,
 )
 
-# Epicenter: translucent red fill (same alpha strategy as destinations
-# — colour reads as glow rather than a painted blob). Stroke stays
-# bright so the country shape is visible.
+# Epicenter: translucent red fill — retains the crisis-red signal
+# against the blue basemap. Stroke warm-white so it pops against cyan.
 epicenter_layer = pdk.Layer(
     "GeoJsonLayer",
     data=_epicenter_geo,
@@ -657,6 +616,22 @@ arc_layer = pdk.Layer(
     pickable=True,
 )
 
+# Glowing cyan dots at each destination city — echoes the digital-globe
+# network aesthetic and gives the arc endpoints a visible anchor.
+_city_nodes = [
+    {"position": list(meta["lonlat"]), "label": meta["label"]}
+    for meta in constants.DESTINATION_CITIES.values()
+]
+city_nodes_layer = pdk.Layer(
+    "ScatterplotLayer",
+    data=_city_nodes,
+    get_position="position",
+    get_fill_color=_globe_style.CITY_NODE_COLOR,
+    get_radius=_globe_style.CITY_NODE_RADIUS,
+    radius_units="meters",
+    pickable=False,
+)
+
 # zoom=0 gives the classic "full earth as a sphere in space" look on
 # pydeck's GlobeView. Higher values flatten the curvature because the
 # viewport fills with land before the sphere edge is visible.
@@ -677,26 +652,20 @@ view_state = pdk.ViewState(
 
 deck = pdk.Deck(
     layers=[
-        night_lights_layer,
-        destination_layer,
-        epicenter_layer,
+        rest_layer,         # blue tech-globe basemap (all other countries)
+        destination_layer,  # correlation-driven fills over basemap
+        epicenter_layer,    # crisis-red over basemap
         arc_outer,
         arc_glow,
         arc_layer,
+        city_nodes_layer,   # cyan destination city dots at arc endpoints
     ],
     initial_view_state=view_state,
     # pydeck's canonical class for the 3D globe is `_GlobeView` with a
     # leading underscore (deck.gl internal class name). Without the
-    # underscore pydeck silently falls back to MapView (Mercator),
-    # which is why earlier versions rendered as a flat world map.
+    # underscore pydeck silently falls back to MapView (Mercator).
     views=[pdk.View(type="_GlobeView", controller=True)],
-    # Suspect the blanket cull=True was silently removing ArcLayer
-    # geometry (and possibly BitmapLayer back faces) — user reports no
-    # arcs visible even after reverting get_width to a constant. Dropping
-    # cull for now; if back-side bleed-through becomes an issue with the
-    # bitmap earth we can solve it per-layer. clearColor black matches
-    # the dark night-lights aesthetic.
-    parameters={"clearColor": [0, 0, 0, 1]},
+    parameters={"clearColor": _globe_style.CLEAR_COLOR},
     map_provider=None,
     tooltip={"text": "{dest_label}\nCorrelation: {correlation}"},
 )
@@ -715,12 +684,9 @@ col_globe, col_right = st.columns([5, 2])
 with col_globe:
     # components.html reloads the iframe on every Play rerun. st.pydeck_chart
     # would avoid that but it doesn't honour _GlobeView — it falls back to
-    # flat Mercator, losing the 3D sphere entirely. Keeping components.html;
-    # the dark-stage CSS above masks the brief white gap between frames.
-    import re as _re
+    # flat Mercator, losing the 3D sphere entirely. No BitmapLayer means the
+    # pydeck 0.9.1 "@@=" image-prop bug no longer applies here.
     _deck_html = deck.to_html(as_string=True, notebook_display=False)
-    # pydeck 0.9.1 prefixes BitmapLayer `image` with "@@=". Strip it.
-    _deck_html = _re.sub(r'"image"\s*:\s*"@@=', '"image": "', _deck_html)
     components.html(_deck_html, height=980, scrolling=False)
 
 with col_right:
