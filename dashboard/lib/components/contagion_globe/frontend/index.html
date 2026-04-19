@@ -4,52 +4,71 @@
   <meta charset="utf-8" />
   <title>Contagion Globe</title>
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; }
+    html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; color: #fff; }
     #deck { position: absolute; inset: 0; }
+    /* Diagnostic overlay — visible only while the globe is still
+       loading. Turns invisible once the first ArcLayer renders. */
+    #status {
+      position: absolute; top: 8px; left: 12px; z-index: 9;
+      font: 12px/1.5 ui-monospace, monospace;
+      color: rgba(255,255,255,0.55); pointer-events: none;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
   </style>
 </head>
 <body>
   <div id="deck"></div>
+  <div id="status">init…</div>
 
-  <!--
-    deck.gl loaded from a CDN because Streamlit Cloud can't run an
-    npm build step per component. Version pinned so future deck.gl
-    breaking changes don't silently regress the globe.
-  -->
-  <script src="https://unpkg.com/deck.gl@9.0.33/dist.min.js"></script>
   <script>
   (function () {
-    // ── Streamlit component protocol (vanilla — no streamlit-component-lib) ──
-    // Parent → iframe:  { type: 'streamlit:render', args: {...}, ... }
-    // iframe → parent:  componentReady, setFrameHeight, setComponentValue
-    const Streamlit = {
-      ready() {
-        window.parent.postMessage({
-          type: 'streamlit:componentReady',
-          apiVersion: 1,
-        }, '*');
-      },
-      setFrameHeight(h) {
-        window.parent.postMessage({
-          type: 'streamlit:setFrameHeight',
-          height: h,
-        }, '*');
-      },
-    };
+    // ─────────────────────────────────────────────────────────────
+    // Streamlit component protocol — fire componentReady *before*
+    // any async work. The "Your app is having trouble loading the
+    // component" banner fires when Streamlit doesn't hear the ready
+    // signal within ~5 s, so we want it sent immediately.
+    // ─────────────────────────────────────────────────────────────
+    function post(msg) {
+      try { window.parent.postMessage(msg, '*'); } catch (e) {}
+    }
+    post({ type: 'streamlit:componentReady', apiVersion: 1 });
+    post({ type: 'streamlit:setFrameHeight', height: 980 });
 
+    const statusEl = document.getElementById('status');
+    function setStatus(msg) {
+      if (statusEl) statusEl.textContent = msg;
+      console.log('[contagion_globe]', msg);
+    }
+    setStatus('waiting for deck.gl…');
+
+    // Incoming render events are buffered until deck.gl is loaded —
+    // Streamlit can fire streamlit:render any time, and the very
+    // first render usually arrives before our async script tag has
+    // finished fetching deck.gl.
+    let pendingArgs = null;
     let deckInstance = null;
+
+    window.addEventListener('message', function (event) {
+      if (!event.data || event.data.type !== 'streamlit:render') return;
+      pendingArgs = event.data.args || {};
+      tryRender();
+    });
+
+    function tryRender() {
+      if (!window.deck || !pendingArgs) return;
+      try {
+        onRender(pendingArgs);
+      } catch (err) {
+        setStatus('render error: ' + err.message);
+      }
+    }
 
     function buildLayers(args) {
       const layers = [];
 
-      // Earth surface — NASA Black Marble texture. jsDelivr URL set
-      // from Python; browser caches it so subsequent renders don't
-      // re-fetch.
-      // Bundled JPG lives next to this index.html inside the component
-      // directory, so Streamlit serves it from the same origin as the
-      // iframe — no CORS / no CDN-fetch failure path. Python can
-      // still override via args.nightLightsUrl if someone wants a
-      // different texture; defaults to the bundled file.
+      // Earth surface — NASA Black Marble texture bundled alongside
+      // index.html so Streamlit serves it from the same origin. No
+      // CORS, no external CDN fetch failure path.
       const nightLightsSrc = args.nightLightsUrl || './world_night.jpg';
       layers.push(new deck.BitmapLayer({
         id: 'night-lights',
@@ -59,27 +78,25 @@
       }));
 
       // Destination countries — fill driven by each feature's
-      // ql_fill property (the current rolling correlation mapped
-      // through Python's RAG helper). deck.gl diffs GeoJsonLayer
-      // props; when the accessor function result changes it just
-      // re-uploads the colour buffer, no feature re-upload.
+      // ql_fill property (computed Python-side from the current
+      // correlation). updateTriggers on the fill accessor make
+      // deck.gl re-evaluate colours when args.colourTrigger changes
+      // (typically the selected date), even though the feature array
+      // length stays constant.
       if (args.destinationFeatures && args.destinationFeatures.features) {
         layers.push(new deck.GeoJsonLayer({
           id: 'destinations',
           data: args.destinationFeatures,
           stroked: true,
           filled: true,
-          getFillColor: f => f.properties.ql_fill || [71, 85, 105, 80],
+          getFillColor: function (f) { return f.properties.ql_fill || [71, 85, 105, 80]; },
           getLineColor: [255, 255, 255, 235],
           lineWidthMinPixels: 1.4,
           pickable: false,
-          updateTriggers: {
-            getFillColor: args.colourTrigger,
-          },
+          updateTriggers: { getFillColor: args.colourTrigger },
         }));
       }
 
-      // Epicenter polygon — static red glow.
       if (args.epicenterFeatures && args.epicenterFeatures.features) {
         layers.push(new deck.GeoJsonLayer({
           id: 'epicenter',
@@ -93,91 +110,95 @@
         }));
       }
 
-      // Triple-stack neon arcs: outer bloom + middle glow + thin
-      // bright core. updateTriggers on the accessors make deck.gl
-      // diff the arc array and only re-upload changed buffers.
-      const arcs = args.arcs || [];
-      const arcCommon = {
-        data: arcs,
-        getSourcePosition: d => d.source,
-        getTargetPosition: d => d.target,
-        getSourceColor: d => d.color,
-        getTargetColor: d => d.color,
-        greatCircle: true,
-        updateTriggers: {
-          getSourceColor: args.colourTrigger,
-          getTargetColor: args.colourTrigger,
-          getWidth: args.colourTrigger,
-        },
-      };
+      // Triple-layer neon glow arcs.
+      var arcs = args.arcs || [];
+      var triggers = { getSourceColor: args.colourTrigger, getTargetColor: args.colourTrigger, getWidth: args.colourTrigger };
       layers.push(new deck.ArcLayer({
-        ...arcCommon,
-        id: 'arc-outer',
-        getWidth: d => (d.width || 1) * 8,
-        widthMinPixels: 6,
-        opacity: 0.06,
-        pickable: false,
+        id: 'arc-outer', data: arcs,
+        getSourcePosition: function (d) { return d.source; },
+        getTargetPosition: function (d) { return d.target; },
+        getSourceColor:    function (d) { return d.color; },
+        getTargetColor:    function (d) { return d.color; },
+        getWidth:          function (d) { return (d.width || 1) * 8; },
+        widthMinPixels: 6, opacity: 0.06, greatCircle: true, pickable: false,
+        updateTriggers: triggers,
       }));
       layers.push(new deck.ArcLayer({
-        ...arcCommon,
-        id: 'arc-glow',
-        getWidth: d => (d.width || 1) * 3,
-        widthMinPixels: 3,
-        opacity: 0.18,
-        pickable: false,
+        id: 'arc-glow', data: arcs,
+        getSourcePosition: function (d) { return d.source; },
+        getTargetPosition: function (d) { return d.target; },
+        getSourceColor:    function (d) { return d.color; },
+        getTargetColor:    function (d) { return d.color; },
+        getWidth:          function (d) { return (d.width || 1) * 3; },
+        widthMinPixels: 3, opacity: 0.18, greatCircle: true, pickable: false,
+        updateTriggers: triggers,
       }));
       layers.push(new deck.ArcLayer({
-        ...arcCommon,
-        id: 'arc-core',
-        getWidth: d => (d.width || 1),
-        widthMinPixels: 1,
-        opacity: 0.95,
-        pickable: true,
+        id: 'arc-core', data: arcs,
+        getSourcePosition: function (d) { return d.source; },
+        getTargetPosition: function (d) { return d.target; },
+        getSourceColor:    function (d) { return d.color; },
+        getTargetColor:    function (d) { return d.color; },
+        getWidth:          function (d) { return (d.width || 1); },
+        widthMinPixels: 1, opacity: 0.95, greatCircle: true, pickable: true,
+        updateTriggers: triggers,
       }));
 
       return layers;
     }
 
     function onRender(args) {
-      const layers = buildLayers(args);
-
+      var layers = buildLayers(args);
       if (!deckInstance) {
-        // First render — initialise the Deck instance. _GlobeView is
-        // the deck.gl internal globe view (leading underscore is the
-        // canonical class name; `GlobeView` without the underscore
-        // silently falls back to a flat Mercator map).
         deckInstance = new deck.Deck({
           container: document.getElementById('deck'),
+          // `_GlobeView` (leading underscore) is the canonical
+          // deck.gl internal class name. Without it deck silently
+          // falls back to a flat Mercator map.
           views: [new deck._GlobeView({ resolution: 10 })],
           initialViewState: args.viewState || {
-            longitude: 56.0,
-            latitude: 34.0,
-            zoom: 1.0,
-            pitch: 35,
-            bearing: 0,
+            longitude: 56, latitude: 34, zoom: 1, pitch: 35, bearing: 0,
           },
           controller: true,
           parameters: { clearColor: [0, 0, 0, 1] },
-          layers,
+          layers: layers,
         });
+        setStatus('');   // clear the overlay once we've rendered
       } else {
-        // Subsequent renders — only update layers. The iframe and
-        // the Deck instance survive; deck.gl diffs the new layer
-        // set against the current scene and re-uploads only what
-        // changed. No iframe reload, no globe re-init. This is the
-        // whole point of the custom component.
-        deckInstance.setProps({ layers });
+        // Subsequent renders — only the layers change. deck.gl diffs
+        // the layer list against the current scene and re-uploads
+        // only what changed. No iframe reload, no WebGL re-init.
+        deckInstance.setProps({ layers: layers });
       }
     }
 
-    window.addEventListener('message', (event) => {
-      if (!event.data || event.data.type !== 'streamlit:render') return;
-      onRender(event.data.args || {});
-    });
+    // Load deck.gl async with CDN fallback. The "trouble loading
+    // component" banner used to fire because a synchronous
+    // <script src=unpkg> at the top of this file blocked inline-
+    // script execution while the CDN was slow, delaying
+    // componentReady past Streamlit's timeout.
+    function loadScript(url, onSuccess, onError) {
+      var s = document.createElement('script');
+      s.src = url; s.async = true;
+      s.onload = onSuccess; s.onerror = onError;
+      document.head.appendChild(s);
+    }
 
-    // Tell Streamlit we're ready to receive renders.
-    Streamlit.ready();
-    Streamlit.setFrameHeight(980);
+    var CDN_PRIMARY   = 'https://cdn.jsdelivr.net/npm/deck.gl@9/dist.min.js';
+    var CDN_FALLBACK  = 'https://unpkg.com/deck.gl@9/dist.min.js';
+
+    loadScript(
+      CDN_PRIMARY,
+      function () { setStatus('deck.gl loaded'); tryRender(); },
+      function () {
+        setStatus('jsdelivr failed, trying unpkg');
+        loadScript(
+          CDN_FALLBACK,
+          function () { setStatus('deck.gl loaded (unpkg)'); tryRender(); },
+          function () { setStatus('deck.gl load FAILED'); }
+        );
+      }
+    );
   })();
   </script>
 </body>
