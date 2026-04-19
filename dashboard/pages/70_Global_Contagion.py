@@ -183,15 +183,28 @@ st.markdown(
 
     /* Soften the per-frame iframe reload of the globe. Each Play rerun
        sends a fresh components.html payload and the iframe reinits
-       deck.gl — briefly going blank between frames and producing a
-       strobe/blink effect. We mask the blink with:
-         • starting opacity 0.72 (not 0 or 0.35) so the transition
-           doesn't look like a flash-of-black
-         • longer 0.6s ease so adjacent frames overlap visually
-       Paired with the jsDelivr-cached night-lights image, the iframe
-       reload is fast enough that the ramp lands on a painted globe. */
+       deck.gl — between the old iframe unmounting and the new one
+       painting, Streamlit briefly shows its default white page bg
+       through the gap, producing the "flash to white" the user sees.
+
+       Fix is two-part:
+       1. Paint the iframe WRAPPER black so the gap is dark, not
+          white. During the brief unmount-then-remount window the
+          wrapper div is still in the DOM and its background shows.
+       2. Fade-in the new iframe from opacity 0.55 over 0.6 s so the
+          transition from "dark stage" to "painted globe" is a gentle
+          ramp rather than a hard cut. */
+    [data-testid="stMain"] [data-testid="stIFrame"],
+    [data-testid="stMain"] .stIFrame,
+    [data-testid="stMain"] .element-container:has([data-testid="stIFrame"]) {
+        background: #000 !important;
+    }
+    [data-testid="stMain"] [data-testid="stIFrame"] iframe,
+    [data-testid="stMain"] .stIFrame iframe {
+        background: #000 !important;
+    }
     @keyframes ql-globe-fade-in {
-        from { opacity: 0.72; }
+        from { opacity: 0.55; }
         to   { opacity: 1; }
     }
     [data-testid="stMain"] iframe[title="streamlit_app"],
@@ -731,31 +744,32 @@ deck = pdk.Deck(
 col_globe, col_right = st.columns([5, 2])
 
 with col_globe:
-    # Reverted to components.html(deck.to_html(...)) after a custom
-    # Streamlit component built for seamless arc updates couldn't be
-    # loaded by Streamlit Cloud (declare_component with both path= and
-    # url=jsDelivr both produced the "trouble loading component"
-    # timeout). The custom-component code is preserved under
-    # dashboard/lib/components/contagion_globe/ for a follow-up debug
-    # session — the deck.gl + postMessage logic is correct, the
-    # blocker is Streamlit Cloud's component-serving layer for a
-    # dashboard subdirectory.
-    #
-    # Trade-off: this pattern ships the full deck HTML (~50 KB) on
-    # every rerun, so the iframe reloads and deck.gl re-inits each
-    # time selected_date advances. The per-frame blink is visible but
-    # tolerable when Play stepping is monthly rather than daily (see
-    # the Playback tick block at the bottom of the script) — fewer
-    # reloads per second means the 0.6 s iframe fade-in has time to
-    # mask each one.
-    import re as _re
-    _deck_html = deck.to_html(as_string=True, notebook_display=False)
-    # pydeck 0.9.1 prefixes the BitmapLayer `image` prop with "@@=" in
-    # the serialised JSON. Strip it so deck.gl sees a plain URL string
-    # instead of trying to evaluate an expression that starts with
-    # "data" and fails at the first colon.
-    _deck_html = _re.sub(r'"image"\s*:\s*"@@=', '"image": "', _deck_html)
-    components.html(_deck_html, height=980, scrolling=False)
+    # Custom component — iframe stays mounted across reruns, only arc
+    # data + destination fills update via deck.gl setProps. Registered
+    # with a data: URL (see dashboard/lib/components/contagion_globe/
+    # __init__.py) so Streamlit Cloud's component-serving layer isn't
+    # involved — previous path= and url=<CDN> attempts both timed out
+    # on Cloud. With data: URL the iframe's src is the entire HTML +
+    # embedded image inline, nothing to fetch externally.
+    from components.contagion_globe import contagion_globe  # noqa: E402
+    contagion_globe(
+        arcs=arc_rows,
+        destination_features={
+            "type": "FeatureCollection",
+            "features": _dest_features_enriched,
+        },
+        epicenter_features=_epicenter_geo,
+        view_state={
+            "longitude": constants.EPICENTER_LONLAT[0],
+            "latitude": constants.EPICENTER_LONLAT[1] + 8,
+            "zoom": 1.0,
+            "pitch": 35,
+            "bearing": st.session_state.get("contagion_globe_bearing", 0.0),
+        },
+        colour_trigger=str(selected_date),
+        height=980,
+        key="contagion_globe",
+    )
 
 with col_right:
     # Big month-year anchor above the correlation numbers — gives the
