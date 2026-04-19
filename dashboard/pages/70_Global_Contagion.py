@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 
@@ -180,11 +181,28 @@ st.markdown(
         opacity: 1;
     }
 
-    /* st.pydeck_chart renders the deck.gl canvas directly in the React
-       tree (no iframe). Paint the pydeck container black so the canvas
-       background matches the globe's clearColor (#000). */
-    [data-testid="stMain"] canvas {
-        background: #000;
+    /* The globe iframe reinits on every Play rerun (components.html creates
+       a new iframe per render). During the brief unmount-remount gap the
+       wrapper is visible — paint it black so the transition is dark→globe
+       rather than white→globe. The fade-in starts from opacity 0 so the
+       brief flicker reads as a smooth dissolve. */
+    [data-testid="stMain"] [data-testid="stIFrame"],
+    [data-testid="stMain"] .stIFrame,
+    [data-testid="stMain"] .element-container:has([data-testid="stIFrame"]) {
+        background: #000 !important;
+    }
+    [data-testid="stMain"] [data-testid="stIFrame"] iframe,
+    [data-testid="stMain"] .stIFrame iframe {
+        background: #000 !important;
+    }
+    @keyframes ql-globe-fade-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+    [data-testid="stMain"] iframe[title="streamlit_app"],
+    [data-testid="stMain"] .stIFrame iframe {
+        animation: ql-globe-fade-in 0.35s ease-out;
+        will-change: opacity;
     }
     </style>
     """,
@@ -718,13 +736,15 @@ deck = pdk.Deck(
 col_globe, col_right = st.columns([5, 2])
 
 with col_globe:
-    # st.pydeck_chart reuses the same deck.gl WebGL context across
-    # reruns (React reconciliation via a stable key) — no iframe reload,
-    # no blink. It differs from components.html(deck.to_html(...)) which
-    # creates a new iframe every rerun. The BitmapLayer @@= bug from
-    # deck.to_html() does not apply here because st.pydeck_chart uses
-    # deck.to_json() internally, which serialises the image URL cleanly.
-    st.pydeck_chart(deck, key="contagion_globe", use_container_width=True, height=980)
+    # components.html reloads the iframe on every Play rerun. st.pydeck_chart
+    # would avoid that but it doesn't honour _GlobeView — it falls back to
+    # flat Mercator, losing the 3D sphere entirely. Keeping components.html;
+    # the dark-stage CSS above masks the brief white gap between frames.
+    import re as _re
+    _deck_html = deck.to_html(as_string=True, notebook_display=False)
+    # pydeck 0.9.1 prefixes BitmapLayer `image` with "@@=". Strip it.
+    _deck_html = _re.sub(r'"image"\s*:\s*"@@=', '"image": "', _deck_html)
+    components.html(_deck_html, height=980, scrolling=False)
 
 with col_right:
     # Big month-year anchor above the correlation numbers — gives the
