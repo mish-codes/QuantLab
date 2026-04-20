@@ -690,8 +690,8 @@ city_nodes_layer = pdk.Layer(
 view_state = pdk.ViewState(
     longitude=constants.EPICENTER_LONLAT[0],
     latitude=constants.EPICENTER_LONLAT[1] + 8,
-    zoom=1.0,
-    pitch=35,
+    zoom=1.5,
+    pitch=20,
     bearing=st.session_state.get("contagion_globe_bearing", 0.0),
 )
 
@@ -736,19 +736,22 @@ with col_globe:
     # the teal atmosphere reads as sky rather than a jarring flat fill.
     # Done inside the iframe HTML (not via outer Streamlit CSS) because
     # Streamlit Cloud iframes are cross-origin and outer CSS cannot reach in.
-    # The canvas is position:absolute; left:0; top:0; width:100%; height:100%
-    # inside #deck-container. overflow:hidden + border-radius on the container
-    # clips the WebGL canvas to rounded corners. Margin exposes the dark body
-    # background as a frame, making the teal atmosphere read as "sky" not glitch.
+    # Circular clip: #deck-container becomes a circle via border-radius:50%.
+    # The canvas (position:absolute; 100%×100%) is clipped by overflow:hidden
+    # on the container. At zoom=1.5 the sphere fills the circle so no sky
+    # bleeds in at the edges. Dark navy body shows around the circle as frame.
     _globe_inject = (
         "<style>"
         "body{background:#000c1e;margin:0;padding:0;overflow:hidden;}"
         "#deck-container{"
-        "width:calc(100vw - 16px);"
-        "height:calc(100vh - 16px);"
-        "margin:8px;"
-        "border-radius:16px;"
+        "width:min(100vw,100vh);"
+        "height:min(100vw,100vh);"
+        "border-radius:50%;"
         "overflow:hidden;"
+        "position:absolute;"
+        "top:50%;"
+        "left:50%;"
+        "transform:translate(-50%,-50%);"
         "}"
         "</style>"
     )
