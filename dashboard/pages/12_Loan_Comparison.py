@@ -9,15 +9,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 from finance import loan_amortization
-from nav import render_sidebar
-from page_header import render_page_header
+from page_init import setup_page
 from test_tab import render_test_tab
-render_sidebar()
 
-st.set_page_config(page_title="Loan Comparison", page_icon="assets/logo.png", layout="wide")
-render_page_header("Loan Comparison", "Side-by-side loan analysis with rate sensitivity")
-
-tab_app, tab_tests = st.tabs(["App", "Tests"])
+tab_app, tab_tests = setup_page("Loan Comparison", "Side-by-side loan analysis with rate sensitivity")
 
 with tab_app:
     with st.expander("How it works"):

@@ -13,16 +13,12 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import acf
-from data import fetch_stock_history
-from nav import render_sidebar
-from page_header import render_page_header
+from page_init import setup_page
+from stock_inputs import stock_input_panel
+from cached_data import load_stock_data
 from test_tab import render_test_tab
-render_sidebar()
 
-st.set_page_config(page_title="Time Series", page_icon="assets/logo.png", layout="wide")
-render_page_header("Time Series", "Trend, seasonal, and residual decomposition with ACF")
-
-tab_app, tab_tests = st.tabs(["App", "Tests"])
+tab_app, tab_tests = setup_page("Time Series", "Trend, seasonal, and residual decomposition with ACF")
 
 with tab_app:
     with st.expander("How it works"):
@@ -43,13 +39,7 @@ with tab_app:
         """)
 
     # -- Inputs -------------------------------------------------------------------
-    col1, col2 = st.columns(2)
-
-    with col1:
-        ticker = st.text_input("Ticker Symbol", value="AAPL").upper().strip()
-
-    with col2:
-        period = st.selectbox("Period", ["6mo", "1y", "2y", "5y"], index=2)
+    ticker, period = stock_input_panel(periods=["6mo", "1y", "2y", "5y"], default_period="2y")
 
     _stop = False
 
@@ -58,17 +48,11 @@ with tab_app:
         _stop = True
 
 
-    @st.cache_data(show_spinner=False)
-    def load_prices(tkr: str, per: str) -> pd.Series:
-        df = fetch_stock_history(tkr, per)
-        return df["Close"].dropna()
-
-
     if not _stop:
         st.divider()
 
         with st.spinner(f"Loading {ticker}..."):
-            prices = load_prices(ticker, period)
+            prices = load_stock_data(ticker, period)["Close"].dropna()
 
         if prices.empty or len(prices) < 60:
             st.error(f"Need at least 60 trading days. Got {len(prices)} for **{ticker}**.")

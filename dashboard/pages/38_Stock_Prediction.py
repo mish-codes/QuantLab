@@ -13,16 +13,12 @@ import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from data import fetch_stock_history
-from nav import render_sidebar
-from page_header import render_page_header
+from page_init import setup_page
+from stock_inputs import stock_input_panel
+from cached_data import load_stock_data
 from test_tab import render_test_tab
-render_sidebar()
 
-st.set_page_config(page_title="Stock Prediction", page_icon="assets/logo.png", layout="wide")
-render_page_header("Stock Prediction", "Feature engineering and regression for price forecasting")
-
-tab_app, tab_tests = st.tabs(["App", "Tests"])
+tab_app, tab_tests = setup_page("Stock Prediction", "Feature engineering and regression for price forecasting")
 
 with tab_app:
     with st.expander("How it works"):
@@ -49,13 +45,9 @@ with tab_app:
     )
 
     # -- Inputs -------------------------------------------------------------------
-    col1, col2, col3, col4 = st.columns(4)
+    ticker, period = stock_input_panel(periods=["1y", "2y", "5y"], default_period="2y")
 
-    with col1:
-        ticker = st.text_input("Ticker Symbol", value="AAPL").upper().strip()
-
-    with col2:
-        period = st.selectbox("Period", ["1y", "2y", "5y"], index=1)
+    col3, col4 = st.columns(2)
 
     with col3:
         model_choice = st.radio("Model", ["Linear Regression", "Random Forest"])
@@ -70,12 +62,10 @@ with tab_app:
     st.divider()
 
 
-    @st.cache_data(show_spinner=False)
-    def load_and_engineer(tkr: str, per: str) -> pd.DataFrame:
-        df = fetch_stock_history(tkr, per)
-        if df.empty:
-            return pd.DataFrame()
+    with st.spinner(f"Loading {ticker}..."):
+        df = load_stock_data(ticker, period)
 
+    if not df.empty:
         df["Return"] = df["Close"].pct_change()
         # Lagged returns
         for lag in range(1, 6):
@@ -95,12 +85,7 @@ with tab_app:
         df["Vol_Change"] = df["Volume"].pct_change()
         # Target: next-day return
         df["Target"] = df["Return"].shift(-1)
-
-        return df.dropna()
-
-
-    with st.spinner(f"Loading {ticker}..."):
-        df = load_and_engineer(ticker, period)
+        df = df.dropna()
 
     if df.empty or len(df) < 60:
         st.error(f"Insufficient data for **{ticker}**.")

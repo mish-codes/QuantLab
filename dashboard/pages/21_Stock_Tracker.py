@@ -9,16 +9,12 @@ import streamlit as st
 from tech_footer import render_tech_footer
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from data import fetch_stock_history
-from nav import render_sidebar
-from page_header import render_page_header
+from page_init import setup_page
+from stock_inputs import stock_input_panel
+from cached_data import load_stock_data
 from test_tab import render_test_tab
-render_sidebar()
 
-st.set_page_config(page_title="Stock Tracker", page_icon="assets/logo.png", layout="wide")
-render_page_header("Stock Tracker", "Candlestick charts, volume bars, 52-week range")
-
-tab_app, tab_tests = st.tabs(["App", "Tests"])
+tab_app, tab_tests = setup_page("Stock Tracker", "Candlestick charts, volume bars, 52-week range")
 
 with tab_app:
     with st.expander("How it works"):
@@ -38,13 +34,7 @@ with tab_app:
         """)
 
     # -- Inputs (main area) ------------------------------------------------------
-    col_in1, col_in2 = st.columns(2)
-
-    with col_in1:
-        ticker = st.text_input("Ticker Symbol", value="AAPL").upper().strip()
-
-    with col_in2:
-        period = st.selectbox("Period", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
+    ticker, period = stock_input_panel()
 
     st.divider()
 
@@ -53,8 +43,7 @@ with tab_app:
         st.stop()
 
     # -- Fetch Data ---------------------------------------------------------------
-    with st.spinner(f"Fetching {ticker} data..."):
-        df = fetch_stock_history(ticker, period)
+    df = load_stock_data(ticker, period)
 
     if df.empty:
         st.error(f"No data found for ticker **{ticker}**. Please check the symbol and try again.")

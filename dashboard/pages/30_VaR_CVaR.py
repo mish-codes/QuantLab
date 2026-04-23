@@ -11,16 +11,12 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from scipy import stats as sp_stats
-from data import fetch_stock_history
-from nav import render_sidebar
-from page_header import render_page_header
+from page_init import setup_page
+from stock_inputs import stock_input_panel
+from cached_data import load_returns
 from test_tab import render_test_tab
-render_sidebar()
 
-st.set_page_config(page_title="VaR & CVaR", page_icon="assets/logo.png", layout="wide")
-render_page_header("VaR & CVaR", "Historical and parametric Value at Risk, Conditional VaR")
-
-tab_app, tab_tests = st.tabs(["App", "Tests"])
+tab_app, tab_tests = setup_page("VaR & CVaR", "Historical and parametric Value at Risk, Conditional VaR")
 
 with tab_app:
     with st.expander("How it works"):
@@ -40,28 +36,14 @@ with tab_app:
         """)
 
     # -- Inputs -------------------------------------------------------------------
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        ticker = st.text_input("Ticker Symbol", value="AAPL").upper().strip()
-
-    with col2:
-        period = st.selectbox("Period", ["3mo", "6mo", "1y", "2y", "5y"], index=2)
-
-    with col3:
-        confidence = st.slider("Confidence Level (%)", 90, 99, 95)
+    ticker, period = stock_input_panel(periods=["3mo", "6mo", "1y", "2y", "5y"], default_period="1y")
+    confidence = st.slider("Confidence Level (%)", 90, 99, 95)
 
     if not ticker:
         st.info("Enter a ticker symbol above.")
         st.stop()
 
     st.divider()
-
-
-    @st.cache_data(show_spinner=False)
-    def load_returns(tkr: str, per: str) -> pd.Series:
-        df = fetch_stock_history(tkr, per)
-        return df["Close"].pct_change().dropna()
 
 
     with st.spinner(f"Loading {ticker}..."):
