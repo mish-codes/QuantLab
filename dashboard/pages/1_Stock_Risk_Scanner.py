@@ -10,6 +10,7 @@ render_sidebar()
 import yfinance as yf
 import pandas as pd
 import numpy as np
+import re
 import requests
 from datetime import datetime
 
@@ -174,17 +175,11 @@ with tab_app:
             st.error("Rate limit reached — max 10 scans per hour. Try again later.")
         else:
             st.session_state.scan_count += 1
-            with st.spinner("Validating tickers..."):
-                invalid = []
-                for t in tickers:
-                    try:
-                        if yf.Ticker(t).fast_info.last_price is None:
-                            invalid.append(t)
-                    except Exception:
-                        invalid.append(t)
-                if invalid:
-                    st.error(f"Ticker(s) not found: {', '.join(invalid)} — check the symbols and try again.")
-                    st.stop()
+            _TICKER_RE = re.compile(r"^[A-Z0-9\.\-\^]{1,7}$")
+            invalid = [t for t in tickers if not _TICKER_RE.match(t)]
+            if invalid:
+                st.error(f"Invalid ticker format: {', '.join(invalid)} — use uppercase symbols like AAPL, BRK.B.")
+                st.stop()
 
             try:
                 with st.status("Running scan...", expanded=True) as status:
