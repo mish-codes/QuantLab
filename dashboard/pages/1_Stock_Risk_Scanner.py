@@ -178,8 +178,7 @@ with tab_app:
                 invalid = []
                 for t in tickers:
                     try:
-                        info = yf.Ticker(t).info
-                        if not info or info.get("regularMarketPrice") is None:
+                        if yf.Ticker(t).fast_info.last_price is None:
                             invalid.append(t)
                     except Exception:
                         invalid.append(t)
