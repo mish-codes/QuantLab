@@ -12,16 +12,12 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from data import fetch_stock_history
-from nav import render_sidebar
-from page_header import render_page_header
+from page_init import setup_page
+from stock_inputs import stock_input_panel
+from cached_data import load_stock_data
 from test_tab import render_test_tab
-render_sidebar()
 
-st.set_page_config(page_title="Market Insights", page_icon="assets/logo.png", layout="wide")
-render_page_header("Market Insights", "Sentiment-price correlation dashboard")
-
-tab_app, tab_tests = st.tabs(["App", "Tests"])
+tab_app, tab_tests = setup_page("Market Insights", "Sentiment-price correlation dashboard")
 
 with tab_app:
     with st.expander("How it works"):
@@ -41,13 +37,7 @@ with tab_app:
         """)
 
     # -- Inputs --------------------------------------------------------------------
-    col1, col2 = st.columns(2)
-
-    with col1:
-        ticker = st.text_input("Ticker Symbol", value="AAPL").upper().strip()
-
-    with col2:
-        period = st.selectbox("Period", ["3mo", "6mo", "1y"], index=1)
+    ticker, period = stock_input_panel(periods=["3mo", "6mo", "1y"], default_period="6mo")
 
     if not ticker:
         st.info("Enter a ticker symbol above.")
@@ -134,15 +124,10 @@ with tab_app:
         return pd.DataFrame(rows)
 
 
-    @st.cache_data(show_spinner=False)
-    def load_prices(tkr: str, per: str) -> pd.DataFrame:
-        return fetch_stock_history(tkr, per)
-
-
     sent_df = score_headlines(headlines)
 
     with st.spinner(f"Loading {ticker}..."):
-        price_df = load_prices(ticker, period)
+        price_df = load_stock_data(ticker, period)
 
     if price_df.empty:
         st.error(f"No data found for **{ticker}**.")
@@ -153,7 +138,8 @@ with tab_app:
 
     # -- Merge sentiment with nearest trading date ---------------------------------
     price_daily = price_df[["Close", "Return", "Next_Return"]].copy()
-    price_daily.index = price_daily.index.normalize()
+    idx = price_daily.index.normalize()
+    price_daily.index = idx.tz_convert(None) if idx.tz is not None else idx
 
     merged = pd.merge_asof(
         sent_df.sort_values("Date"),

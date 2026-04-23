@@ -2,10 +2,8 @@
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-from nav import render_sidebar
-from page_header import render_page_header
+from page_init import setup_page
 from test_tab import render_test_tab
-render_sidebar()
 
 import streamlit as st
 from tech_footer import render_tech_footer
@@ -16,10 +14,7 @@ import plotly.express as px
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans, DBSCAN
 
-st.set_page_config(page_title="Clustering", page_icon="assets/logo.png", layout="wide")
-render_page_header("Customer Clustering", "K-Means and DBSCAN segmentation with editable data")
-
-tab_app, tab_tests = st.tabs(["App", "Tests"])
+tab_app, tab_tests = setup_page("Customer Clustering", "K-Means and DBSCAN segmentation with editable data")
 
 with tab_app:
     with st.expander("How it works"):

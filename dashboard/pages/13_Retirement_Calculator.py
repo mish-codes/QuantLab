@@ -9,15 +9,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 from finance import retirement_projection
-from nav import render_sidebar
-from page_header import render_page_header
+from page_init import setup_page
 from test_tab import render_test_tab
-render_sidebar()
 
-st.set_page_config(page_title="Retirement Calculator", page_icon="assets/logo.png", layout="wide")
-render_page_header("Retirement Calculator", "Compound growth projection with Monte Carlo simulation")
-
-tab_app, tab_tests = st.tabs(["App", "Tests"])
+tab_app, tab_tests = setup_page("Retirement Calculator", "Compound growth projection with Monte Carlo simulation")
 
 with tab_app:
     with st.expander("How it works"):

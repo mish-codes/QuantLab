@@ -11,16 +11,12 @@ import pandas as pd
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
-from data import fetch_stock_history
-from nav import render_sidebar
-from page_header import render_page_header
+from page_init import setup_page
+from stock_inputs import stock_input_panel
+from cached_data import load_stock_data
 from test_tab import render_test_tab
-render_sidebar()
 
-st.set_page_config(page_title="Financial Reporting", page_icon="assets/logo.png", layout="wide")
-render_page_header("Financial Reporting", "Auto-generated stats, charts, and CSV export")
-
-tab_app, tab_tests = st.tabs(["App", "Tests"])
+tab_app, tab_tests = setup_page("Financial Reporting", "Auto-generated stats, charts, and CSV export")
 
 with tab_app:
     with st.expander("How it works"):
@@ -41,13 +37,7 @@ with tab_app:
         """)
 
     # -- Inputs (main area) ------------------------------------------------------
-    col_in1, col_in2 = st.columns(2)
-
-    with col_in1:
-        ticker = st.text_input("Ticker Symbol", value="AAPL").upper().strip()
-
-    with col_in2:
-        period = st.selectbox("Period", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
+    ticker, period = stock_input_panel()
 
     st.divider()
 
@@ -56,8 +46,7 @@ with tab_app:
         st.stop()
 
     # -- Fetch Data ---------------------------------------------------------------
-    with st.spinner(f"Fetching {ticker} data..."):
-        df = fetch_stock_history(ticker, period)
+    df = load_stock_data(ticker, period)
 
     if df.empty:
         st.error(f"No data found for **{ticker}**.")

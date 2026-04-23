@@ -2,20 +2,15 @@
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-from nav import render_sidebar
-from page_header import render_page_header
+from page_init import setup_page
 from test_tab import render_test_tab
-render_sidebar()
 
 import streamlit as st
 from tech_footer import render_tech_footer
 import pandas as pd
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Sentiment Analysis", page_icon="assets/logo.png", layout="wide")
-render_page_header("Sentiment Analysis", "VADER and TextBlob applied to financial headlines")
-
-tab_app, tab_tests = st.tabs(["App", "Tests"])
+tab_app, tab_tests = setup_page("Sentiment Analysis", "VADER and TextBlob applied to financial headlines")
 
 with tab_app:
     with st.expander("How it works"):

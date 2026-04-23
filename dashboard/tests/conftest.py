@@ -216,6 +216,8 @@ def mock_textblob():
 @pytest.fixture
 def mock_empty_data():
     """Return empty DataFrames for testing error states."""
+    import streamlit as st
+    st.cache_data.clear()
     empty_df = pd.DataFrame()
     with patch("yfinance.download", return_value=empty_df):
         yield
