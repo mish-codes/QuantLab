@@ -138,7 +138,8 @@ with tab_app:
 
     # -- Merge sentiment with nearest trading date ---------------------------------
     price_daily = price_df[["Close", "Return", "Next_Return"]].copy()
-    price_daily.index = price_daily.index.normalize()
+    idx = price_daily.index.normalize()
+    price_daily.index = idx.tz_convert(None) if idx.tz is not None else idx
 
     merged = pd.merge_asof(
         sent_df.sort_values("Date"),
