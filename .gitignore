@@ -31,3 +31,6 @@ docs/Manisha_*.xlsx
 
 # Scratch / manual test scripts
 try_it.py
+
+# Superpowers plans/specs — keep locally, not in repo
+docs/superpowers/
