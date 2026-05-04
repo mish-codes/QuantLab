@@ -67,4 +67,4 @@ st.markdown(
 _resume_html = (STATIC_DIR / "resume.html").read_text(encoding="utf-8")
 _resume_html = _resume_html.replace("{{QUANTLABS_URL}}", QUANTLABS_URL)
 
-st.iframe(_resume_html, height=4200, scrolling=True)
+st.iframe(_resume_html, height=4200)
