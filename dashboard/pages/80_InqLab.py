@@ -1,4 +1,4 @@
-"""INQ.E.LAB — generative art gallery embedded from inqlab.uk."""
+"""INQLAB — generative art gallery embedded from inqlab.uk."""
 
 import sys
 from pathlib import Path
@@ -11,9 +11,9 @@ from nav import render_sidebar
 from page_header import render_page_header
 from tech_footer import render_tech_footer
 
-st.set_page_config(page_title="INQ.E.LAB", page_icon="assets/logo.png", layout="wide")
+st.set_page_config(page_title="INQLAB", page_icon="assets/logo.png", layout="wide")
 render_sidebar()
-render_page_header("INQ.E.LAB", "Generative art — code & colour")
+render_page_header("INQLAB", "Generative art — code & colour")
 
 st.markdown(
     "19 generative art tools combining historical colour theory (Sanzo Wada, Werner, "
