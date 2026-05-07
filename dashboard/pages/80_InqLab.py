@@ -1,4 +1,4 @@
-"""INQLAB — generative art gallery embedded from inqlab.uk."""
+"""INQLAB — generative art gallery embedded from www.inqlab.uk."""
 
 import sys
 from pathlib import Path
