@@ -23,7 +23,7 @@ st.markdown(
 )
 
 components.iframe(
-    "https://www.inqlab.uk",
+    "https://www.inqlab.uk/",
     height=820,
     scrolling=True,
 )
