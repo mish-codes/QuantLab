@@ -1,4 +1,4 @@
-"""INQLAB — generative art gallery embedded from inqlab.uk."""
+"""INQLAB — generative art gallery embedded from www.inqlab.uk."""
 
 import sys
 from pathlib import Path
@@ -23,7 +23,7 @@ st.markdown(
 )
 
 components.iframe(
-    "https://www.inqlab.uk",
+    "https://www.inqlab.uk/",
     height=820,
     scrolling=True,
 )

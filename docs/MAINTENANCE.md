@@ -8,7 +8,7 @@ Things that need periodic attention to keep the live demo running.
 
 > **Note:** Render's free Postgres expires **30 days** after creation (not 90 as the old plan assumed).
 
-**Current DB:** `finbytes-scanner-db` — created 2026-04-03, expires **2026-05-03**, region `frankfurt`
+**Current DB:** none. `finbytes-scanner-db` was created 2026-04-03, expired 2026-05-03, and Render deleted it after the 14-day grace period (~2026-05-17). The scanner backend has had no database since. Region was `frankfurt` — the new DB **must** be created in the same region as the `finbytes-scanner` web service, or the internal connection string won't resolve.
 
 **How to check:** Visit [quantlabs.streamlit.app/Churros](https://quantlabs.streamlit.app/Churros) → unlock → **Render DB** tab shows days-until-expiry with a colour badge.
 
@@ -17,7 +17,7 @@ Things that need periodic attention to keep the live demo running.
 2. Go to the **Render DB** tab
 3. Type `finbytes-scanner-db` to confirm and click **Recreate database now**
 4. Watch the 6-step progress — delete, create, rewire `DATABASE_URL`, redeploy
-5. **Update `render.postgres_id` in Streamlit secrets** to the new `dpg-...` id the tab shows you
+5. **Update `render.postgres_id` in Streamlit secrets** to the new `dpg-...` id the tab shows you — use the bare resource id, **not** the hostname. The internal hostname has an extra `-a` suffix (`dpg-xxxx-a`); pasting that into the secret makes every Render API call return 404.
 6. Done — tables auto-create on startup, seed data lost (fine for demo)
 
 **How to fix (manual fallback):**
@@ -77,7 +77,7 @@ Currently set to `skip` (fallback mode). To enable AI narratives:
 
 | What | When | Action |
 |------|------|--------|
-| Renew scanner DB | 2026-05-03 | Use Churros → Render DB tab (1-click) |
+| Renew scanner DB | 30 days after each recreate | Use Churros → Render DB tab (1-click) |
 | Check CI minutes | Monthly | Should be well under 2000 min/month |
 | Check Anthropic credits | If API key is added | Set spending cap in Anthropic console |
 
