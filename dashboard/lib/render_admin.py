@@ -17,6 +17,7 @@ Required Streamlit secrets (in [render] table):
 """
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -24,6 +25,25 @@ from typing import Any
 import requests
 
 API_BASE = "https://api.render.com/v1"
+
+# A Render Postgres *resource id* looks like `dpg-d1a2b3c4e5f6g7h8i9j0`.
+# Its *hostname* is that id plus an `-a` suffix, optionally followed by the
+# region host — e.g. `dpg-d1a2...-a.frankfurt-postgres.render.com`.  Only the
+# bare resource id is valid in API paths, so a value copied out of a
+# connection string makes every call 404.
+_PG_ID_RE = re.compile(r"^(dpg-[a-z0-9]+)(?:-a)?(?:\..*)?$", re.IGNORECASE)
+
+
+def normalize_postgres_id(raw: str) -> str:
+    """Return the bare Render resource id from *raw*.
+
+    Accepts the API id, the internal hostname, or the full external host.
+    Values that don't match the expected shape are passed through unchanged
+    so the API returns a real error rather than us silently mangling them.
+    """
+    candidate = (raw or "").strip()
+    match = _PG_ID_RE.match(candidate)
+    return match.group(1) if match else candidate
 
 
 @dataclass
@@ -38,9 +58,15 @@ class RenderConfig:
     env_var_key: str = "DATABASE_URL"
     url_scheme: str = "postgresql+asyncpg"
 
+    def __post_init__(self) -> None:
+        # Tolerate a hostname pasted into the secret instead of the id.
+        self.postgres_id = normalize_postgres_id(self.postgres_id)
+
 
 class RenderError(Exception):
-    pass
+    def __init__(self, message: str, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class RenderClient:
@@ -56,7 +82,10 @@ class RenderClient:
     def _req(self, method: str, path: str, **kw) -> Any:
         r = self.s.request(method, f"{API_BASE}{path}", timeout=30, **kw)
         if not r.ok:
-            raise RenderError(f"{method} {path} -> {r.status_code}: {r.text[:300]}")
+            raise RenderError(
+                f"{method} {path} -> {r.status_code}: {r.text[:300]}",
+                status_code=r.status_code,
+            )
         return r.json() if r.text else {}
 
     # --- Postgres --------------------------------------------------------
@@ -64,8 +93,21 @@ class RenderClient:
     def get_postgres(self, pid: str) -> dict:
         return self._req("GET", f"/postgres/{pid}")
 
-    def delete_postgres(self, pid: str) -> None:
-        self._req("DELETE", f"/postgres/{pid}")
+    def delete_postgres(self, pid: str) -> bool:
+        """Delete *pid*; return False if it was already gone.
+
+        Render reaps an expired free database on its own, so by the time
+        anyone presses "recreate" the old instance may no longer exist.  The
+        goal of this step is the *absence* of that database, so a 404 means
+        the step already holds — not that the recreate should abort.
+        """
+        try:
+            self._req("DELETE", f"/postgres/{pid}")
+        except RenderError as exc:
+            if exc.status_code == 404:
+                return False
+            raise
+        return True
 
     def create_postgres(self) -> dict:
         payload = {

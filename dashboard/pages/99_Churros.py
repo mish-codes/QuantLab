@@ -188,10 +188,16 @@ with tab_render:
             with st.status("Recreating Render Postgres...", expanded=True) as status_box:
                 try:
                     st.write(f"1/6 Deleting old Postgres `{render_cfg.postgres_id}`...")
-                    render_client.delete_postgres(render_cfg.postgres_id)
+                    existed = render_client.delete_postgres(render_cfg.postgres_id)
 
-                    st.write("2/6 Waiting 10s for deletion to propagate...")
-                    time.sleep(10)
+                    if existed:
+                        st.write("2/6 Waiting 10s for deletion to propagate...")
+                        time.sleep(10)
+                    else:
+                        st.write(
+                            "2/6 Already gone — Render reaps expired free "
+                            "databases automatically. Skipping the wait."
+                        )
 
                     st.write(f"3/6 Creating new Postgres `{render_cfg.db_name}`...")
                     new_db = render_client.create_postgres()
